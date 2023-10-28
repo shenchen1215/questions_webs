@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Options</title>
+</head>
+<body>
+    <h2>Choose an Option</h2>
+    <ul>
+        <tbody>
+		{% for user_profile in babies_list %}
+		    <tr>
+		    <form method="get" action="{% url 'questionnaire:group_questions' user_name=user_profile.user.username role='staff' %}">
+                        {% csrf_token %}
+                        <button type="submit">{{ user_profile.user.username }}</button>
+                    </form>
+		    </tr>
+		{% endfor %}
+        </tbody>
+    </table>
+    </ul>
+</body>
+</html>

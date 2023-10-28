@@ -1,0 +1,12 @@
+
+
+
+<form action = "{% url 'questionnaire:sign_up' %}" method="GET">
+    {% csrf_token %}
+    <input type="submit" value="sign up">
+</form>
+
+<form action = "{% url 'questionnaire:user_login' %}" method="GET">
+    {% csrf_token %}
+    <input type="submit" value="log in">
+</form>

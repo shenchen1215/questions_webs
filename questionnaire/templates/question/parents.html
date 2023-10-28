@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>parents</title>
+</head>
+<body>
+    <h2>Parents</h2>
+    <form action = "{% url 'questionnaire:done' %}" method="post">
+    {% csrf_token %}
+{% if latest_question_list %}
+    {% for question in latest_question_list %}
+        <!--<li><a href="/questionnaire/{{ question.id }}/">{{ question.question_text }}</a></li>-->
+        <!--<li><a href="{% url 'questionnaire:detail' question.id %}">{{ question.question_text }}</a></li>-->
+        <label >{{question.question_text}}</label></br>
+        {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+        {% for choice in question.choice_set.all %}
+            <input type="radio" name="choice{{question.id}}"
+                   value="{{ choice.id }}" id="choice_{{ choice.id }}">
+            <label for="choice_{{ choice.id }}">{{ choice.choice_text }}</label><br>
+        {% endfor %}
+    {% endfor %}
+<input type="submit" value="results">
+
+{% else %}
+    <p>No questions are available in age 30.</p>
+{% endif %}
+</form>
+</body>
+</html>

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Create a New Question</title>
+</head>
+<body>
+    <h1>Create a New Question</h1>
+    <form method="post" action="{% url 'questionnaire:create_question' %}">
+        {% csrf_token %}
+        <label for="question_text">Question Text:</label>
+        <input type="text" id="question_text" name="question_text" required>
+        <br>
+        <label for="choice_1">Choice 1:</label>
+        <input type="text" id="choice_1" name="choice_1" required>
+        <br>
+        <label for="choice_2">Choice 2:</label>
+        <input type="text" id="choice_2" name="choice_2" required>
+        <br>
+        <input type="submit" value="Create Question">
+    </form>
+</body>
+</html>

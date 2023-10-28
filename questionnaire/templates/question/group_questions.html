@@ -1,0 +1,27 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Questions from Month</title>
+</head>
+<body>
+    <h1>Questions from Month</h1>
+    <form method="post" action="{% url 'questionnaire:submit_response' %}">
+        {% csrf_token %}
+        <ul>
+            {% for question in group_questions %}
+                <li>
+                    <label>{{question.question_text}}</label><br>
+                    {% for choice in question.choice_set.all %}
+                        <input type="radio" name="question_{{question.id}}"
+                            value="{{ choice.id }}" id="choice_{{ choice.id }}">
+                        <label for="choice_{{ choice.id }}">{{ choice.choice_text }}</label><br>
+                    {% endfor %}
+                </li>
+            {% endfor %}
+        </ul>
+        <input type="submit" value="Submit">
+    </form>
+</body>
+</html>
+

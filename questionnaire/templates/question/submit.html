@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>User Responses</title>
+</head>
+<body>
+    <h1>User Responses</h1>
+
+    <table>
+        <tr>
+            <th>User</th>
+            <th>Question</th>
+            <th>Choice</th>
+            <th>Timestamp</th>
+            <th>type</th>
+        </tr>
+
+        {% for user_response in user_responses %}
+            <tr>
+                <td>{{ user_response.user_profile.user.username }}</td>
+                <td>{{ user_response.question.question_text }}</td>
+                <td>{{ user_response.choice.choice_text }}</td>
+                <td>{{ user_response.timestamp }}</td>
+                <td>{{ user_response.question.get_type_display }}</td>
+            </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>
+

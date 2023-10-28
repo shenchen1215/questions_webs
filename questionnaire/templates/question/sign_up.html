@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sign Up</title>
+</head>
+<body>
+    <h1>Create a New User</h1>
+    <form method="post" action="{% url 'questionnaire:sign_up' %}">
+        {% csrf_token %}
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required>
+        <br>
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required>
+        <br>
+        <label for="password_confirm">Confirm Password:</label>
+        <input type="password" id="password_confirm" name="password_confirm" required>
+        <br>
+        <label for="birthday_date">Birthday Date:</label>
+        <input type="date" id="birthday_date" name="birthday_date" required>
+        <br>
+	<label for="role">Role:</label>
+        <select id="role" name="role">
+            <option value="admin">Admin</option>
+            <option value="user">Normal User</option>
+            <option value="staff">Staff</option>
+        </select><br>
+        <input type="submit" value="Sign Up">
+    </form>
+</body>
+</html>
