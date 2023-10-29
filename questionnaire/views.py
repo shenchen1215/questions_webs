@@ -207,24 +207,46 @@ class ParentsView(generic.ListView):
 class QuestionsFromGroupView(generic.ListView):
     model = Question
     template_name = "question/group_questions.html"
-    context_object_name = 'group_questions'
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        user_name = self.kwargs.get('user_name', '1')  # Default to '1' if not provided
-        context['user_name'] = user_name
-        role = self.kwargs.get('role', '1')  # Default to '1' if not provided
-        context['role'] = role
-        return context
+    
     def get_queryset(self):
         role = self.kwargs.get('role', '1')
         group_type = {'user' : 1, 'staff':2}
         user_name = self.kwargs.get('user_name', '1')
         age = get_age_by_username(user_name)
-        print(f'age = {age} {group_type[role]}')
-        print(Question.objects.filter(group__name=age, group__type=group_type[role])
-)
-        return Question.objects.filter(group__name=age, group__type=group_type[role])
+
+        # Filter user responses where the choice is 'no'
+        user_responses_no = UserResponse.objects.filter(
+            user_profile__user__username=user_name,
+            choice__choice_text='还不能'
+        ).values_list('question', flat=True)
+
+        # Filter questions where the ID is in the user_responses_no
+        answered_no_questions = Question.objects.filter(id__in=user_responses_no)
+
+        # Get the IDs of questions the user has answered
+        user_responses = UserResponse.objects.filter(
+            user_profile__user__username=user_name
+        ).values_list('question', flat=True)
+
+        # Filter questions based on the user's age and role, and exclude all previously answered questions
+        new_questions = Question.objects.filter(
+            group__name=age,
+            group__type=group_type[role]
+        ).exclude(id__in=user_responses)
+        return new_questions, answered_no_questions
+
+    def get_context_data(self, **kwargs):
+            context = super().get_context_data(**kwargs)
+            user_name = self.kwargs.get('user_name', '1')  # Default to '1' if not provided
+            context['user_name'] = user_name
+            role = self.kwargs.get('role', '1')  # Default to '1' if not provided
+            context['role'] = role
+
+            # Access 'new_questions' and 'answered_no_questions' from get_queryset
+            new_questions, answered_no_questions = self.get_queryset()
+            context['new_questions'] = new_questions
+            context['answered_no_questions'] = answered_no_questions
+            return context
 
 # forms.py
 class QuestionForm(forms.Form):

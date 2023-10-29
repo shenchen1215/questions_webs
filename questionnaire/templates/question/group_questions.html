@@ -9,7 +9,7 @@
     <form method="post" action="{% url 'questionnaire:submit_response' %}">
         {% csrf_token %}
         <ul>
-            {% for question in group_questions %}
+        {% for question in new_questions %}
                 <li>
                     <label>{{question.question_text}}</label><br>
                     {% for choice in question.choice_set.all %}
@@ -20,6 +20,21 @@
                 </li>
             {% endfor %}
         </ul>
+	    <h2>Answered 'No' Questions</h2>
+        <ul>
+        {% for question in answered_no_questions %}
+                <li>
+                    <label>{{question.question_text}}</label><br>
+                    {% for choice in question.choice_set.all %}
+                        <input type="radio" name="question_{{question.id}}"
+                            value="{{ choice.id }}" id="choice_{{ choice.id }}">
+                        <label for="choice_{{ choice.id }}">{{ choice.choice_text }}</label><br>
+                    {% endfor %}
+                </li>
+            {% endfor %}
+        </ul>
+
+    
         <input type="submit" value="Submit">
     </form>
 </body>
