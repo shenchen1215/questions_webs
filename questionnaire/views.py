@@ -2,7 +2,7 @@ from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.views import generic, View
-from .models import Choice, Question, UserProfile, Group, UserResponse
+from .models import Choice, Question, UserProfile, Group, UserResponse, Picture, OperationQuestion
 from django.shortcuts import render, redirect
 from django.contrib.auth.models import User
 from django import forms
@@ -42,7 +42,6 @@ class StaffQuestions(generic.ListView):
 
     def get_queryset(self):
         return UserProfile.objects.filter(role='user')
-
 
 class DetailView(generic.DetailView):
     model = Question
@@ -139,27 +138,37 @@ def user_login(request):
     else:
         form = LoginForm()
     return render(request, 'question/login.html', {'form': form})
-def create_new_question(g_id,g_month, g_type, question):
+def create_new_question(g_month, g_type, question, choices, task, stimulus, posture,picture, op_id):
         # Create a new Group object and save it
-        new_group = Group(id=g_id, name=g_month, type=1)  # Provide the desired name and type
+        new_group = Group(name=g_month, type=2)  # Provide the desired name and type
         new_group.save()
 
         new_question_text = question
-        group = Group.objects.get(pk=g_id)  # Replace 1 with the actual group ID
 
-        new_question = Question(
+        # Replace '/path/to/your/picture.jpg' with the actual path to your picture file
+        picture_path = f'/templates/question_pictures/{picture}'
+
+        # Create a Picture object
+        picture = Picture(image=f'{picture_path}', description = f'{picture}')
+
+        # Save the Picture object
+        picture.save()
+        new_question = OperationQuestion(
             question_text=new_question_text,
-            group=group,
-            type=g_type
+            group=new_group,
+            type=g_type,
+            task = task,
+            stimulus = stimulus,
+            posture = posture,
+            picture =picture,
+            operation_id = op_id
         )
         new_question.save()
-        choice1 = '能'
-        choice2 = '还不能'
-        Choice.objects.create(question=new_question, choice_text=choice1)
-        Choice.objects.create(question=new_question, choice_text=choice2)
+        for choice in choices:
+            Choice.objects.create(operation_question=new_question, choice_text=choice)
 
 def create_new_questions():
-
+    
     print('done')
 def create_question(request):
     if request.method == "POST":
@@ -233,6 +242,10 @@ class QuestionsFromGroupView(generic.ListView):
             group__name=age,
             group__type=group_type[role]
         ).exclude(id__in=user_responses)
+
+        all_questions = Question.objects.all()
+        questions = Question.objects.filter(type=2).distinct()
+
         return new_questions, answered_no_questions
 
     def get_context_data(self, **kwargs):
@@ -248,6 +261,23 @@ class QuestionsFromGroupView(generic.ListView):
             context['answered_no_questions'] = answered_no_questions
             return context
 
+class OperationQuestionsFromGroupView(generic.ListView):
+    model = OperationQuestion
+    template_name = 'question/operation_question.html'
+    context_object_name = 'questions'
+
+    def get_queryset(self):
+        user_name = self.kwargs.get('user_name', '1')
+        age = get_age_by_username(user_name)
+        return OperationQuestion.objects.filter(group__name=age)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user_name = self.kwargs['user_name'] 
+
+        context['current_index'] = self.kwargs.get('current_index', 0)
+        return context
+   
 # forms.py
 class QuestionForm(forms.Form):
     def __init__(self, question, *args, **kwargs):
