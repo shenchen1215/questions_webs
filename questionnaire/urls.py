@@ -19,7 +19,7 @@ urlpatterns = [
     path('login/', views.user_login, name='user_login'),
     path('parents/', views.ParentsView.as_view(), name='parents'),
     path('group-questions/<str:role>/<str:user_name>/', views.QuestionsFromGroupView.as_view(), name='group_questions'),
-    path('operation_questions/<str:user_name>/<int:current_index>/', views.OperationQuestionsFromGroupView.as_view(), name='operation_questions'),
+    path('operation_questions/<str:user_name>/', views.OperationQuestionsFromGroupView.as_view(), name='operation_questions'),
     path('results/submit_response/', views.SubmitResponseView.as_view(), name='submit_response'),
     path('results/parents/<str:group_name>/', views.ResultsView.as_view(), name='results_page')
 ]

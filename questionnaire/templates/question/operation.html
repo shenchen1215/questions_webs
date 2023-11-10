@@ -1,10 +1,54 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>operation</title>
+    <title>operation questions</title>
 </head>
 <body>
-    <h2>operations</h2>
+    <div id="data-container">
+        <h2 id="question"></h2>
+        <ul id="choices"></ul>
+        <button id="next-button">Next</button>
+    </div>
+
+    <script>
+        // Define your data sets
+	const data0 = {{ data0|safe}};
+	const data1 = {{ data1 | safe}}
+	const questions = {{ questions | safe }}
+
+        // Initialize variables
+        let currentDataIndex = 0;
+
+        // Function to update the displayed data
+        function updateData() {
+            const question = document.getElementById('question');
+            const choicesList = document.getElementById('choices');
+            const data = currentDataIndex === 0 ? data0 : data1;
+
+           // question.textContent = data.question;
+	    question.textContent = questions[currentDataIndex].question_text;
+
+            // Clear previous choices
+            choicesList.innerHTML = '';
+
+            // Populate the choices
+            data.choices.forEach((choice) => {
+                const choiceItem = document.createElement('li');
+                choiceItem.textContent = choice;
+                choicesList.appendChild(choiceItem);
+            });
+        }
+
+        // Initial data display
+        updateData();
+
+        // Handle "Next" button click
+        const nextButton = document.getElementById('next-button');
+        nextButton.addEventListener('click', () => {
+            currentDataIndex = (currentDataIndex + 1) % 2; // Toggle between 0 and 1
+            updateData();
+        });
+    </script>
 </body>
 </html>
+

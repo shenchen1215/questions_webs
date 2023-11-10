@@ -1,35 +1,60 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Display Question</title>
+    <title>Operation Question</title>
 </head>
 <body>
     <div id="question-container">
-        {% if questions %}
-            <h2>{{ questions.0.question_text }}</h2>
-            <button id="next-button">Next</button>
-        {% else %}
-            <p>No questions available.</p>
-        {% endif %}
+        <!-- Question and choices will be dynamically loaded here -->
     </div>
 
-    <script>
-        const questions = {{ questions|safe }};
-        let currentIndex = {{ current_index|default:0 }};
+    <button id="next-button">Next</button>
 
-        document.getElementById('next-button').addEventListener('click', () => {
-            currentIndex++;
-            if (currentIndex < questions.length) {
+    <script>
+        const questions = {{ questions|safe }}; // Load your questions data here
+        let currentIndex = 0;
+
+        function displayQuestion(index) {
+            if (index < questions.length) {
+                const question = questions[index].questions.question_text;
+                const choices = questions[index].choices;
+                let choicesHTML = '';
+
+                for (let ch_index = 0; ch_index < choices.length; ch_index++) {
+                    choicesHTML += `
+                        <label>
+                            <input type="radio" name="choice" value="${ch_index}">
+                            ${choices[ch_index]}
+                        </label><br>
+                    `;
+                }
+
                 document.getElementById('question-container').innerHTML = `
-                    <h2>${questions[currentIndex].question_text}</h2>
-                    <button id="next-button">Next</button>
+                    <h2>${question}</h2>
+                    ${choicesHTML}
                 `;
             } else {
                 document.getElementById('question-container').innerHTML = `
                     <p>No more questions available.</p>
                 `;
             }
+        }
+
+        document.getElementById('next-button').addEventListener('click', () => {
+            const selectedChoice = document.querySelector('input[name="choice"]:checked');
+            if (selectedChoice) {
+                const choiceId = selectedChoice.value;
+                console.log('Selected Choice ID:', choiceId);
+            } else {
+                console.log('No choice selected');
+            }
+
+            currentIndex++;
+            displayQuestion(currentIndex);
         });
+
+        // Initial display of the first question
+        displayQuestion(currentIndex);
     </script>
 </body>
 </html>

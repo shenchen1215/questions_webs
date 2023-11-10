@@ -53,7 +53,7 @@ class OperationQuestion(models.Model):
     operation_id = models.IntegerField(null=True, blank=True, default=-1)
 
     def __str__(self):
-        return f"{self.group.id}.{self.operation_id}.{self.question_text}"
+        return f"{self.get_type_display()}.{self.operation_id}.{self.question_text}"
 
 class Question(models.Model):
     CHOICES = [
@@ -70,6 +70,7 @@ class Question(models.Model):
 
     def __str__(self):
         return f"{self.group.id}.{self.question_text}.{self.type}"
+
 class Choice(models.Model):
     question = models.ForeignKey(Question, on_delete=models.CASCADE, null=True, blank=True)
     operation_question = models.ForeignKey(OperationQuestion, on_delete=models.CASCADE, null=True, blank=True)
@@ -77,19 +78,12 @@ class Choice(models.Model):
     def __str__(self):
         return self.choice_text
 
-class UserResponse(models.Model):
-    user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
-    question = models.ForeignKey(Question, on_delete=models.CASCADE)
-    choice = models.ForeignKey(Choice, on_delete=models.CASCADE)
-    timestamp = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"{self.user_profile.user.username}'s response to {self.question.question_text}"
 
 class UserResponse(models.Model):
     user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
     question = models.ForeignKey(Question, on_delete=models.CASCADE, null=True, blank=True)
     operation_question = models.ForeignKey(OperationQuestion, on_delete=models.CASCADE, null=True, blank=True)
+    operation_points = models.IntegerField(null=True, blank=True, default=0)
     choice = models.ForeignKey(Choice, on_delete=models.CASCADE)
     timestamp = models.DateTimeField(auto_now_add=True)
 

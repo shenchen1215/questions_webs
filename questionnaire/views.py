@@ -261,21 +261,53 @@ class QuestionsFromGroupView(generic.ListView):
             context['answered_no_questions'] = answered_no_questions
             return context
 
+from django.http import JsonResponse
+import json
+from django.core.serializers import serialize
+
 class OperationQuestionsFromGroupView(generic.ListView):
     model = OperationQuestion
     template_name = 'question/operation_question.html'
-    context_object_name = 'questions'
 
     def get_queryset(self):
         user_name = self.kwargs.get('user_name', '1')
         age = get_age_by_username(user_name)
-        return OperationQuestion.objects.filter(group__name=age)
+        group_type = {'user' : 1, 'staff' :2}
 
+        # Filter questions based on the user's age and role, and exclude all previously answered questions
+        operation_questions = OperationQuestion.objects.filter(
+            group__name=age,
+        )
+        
+        #for question in operation_questions:
+        #    print(question.choice_set.all())
+        return operation_questions
+    
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        user_name = self.kwargs['user_name'] 
+        user_name = self.kwargs['user_name']
 
+        # Get the questions QuerySet
+        questions = self.get_queryset()
+        questions_list = list(questions.values())
+        index = 0
+        op_questions = []
+        for question in questions:
+            choices = question.choice_set.all()
+            choice_list = []
+            for choice in choices:
+                choice_list.append(choice.choice_text)
+            op_questions.append(
+            {
+                'questions': questions_list[index],
+                'choices': choice_list,
+            }
+            )
+            index +=1
+        print(op_questions)
+ 
         context['current_index'] = self.kwargs.get('current_index', 0)
+        context['questions'] = op_questions
         return context
    
 # forms.py
