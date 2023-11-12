@@ -14,10 +14,11 @@
         const questions = {{ questions|safe }}; // Load your questions data here
         let currentIndex = 0;
 
-        function displayQuestion(index) {
+        function display_questios_a(index) {
             if (index < questions.length) {
-                const question = questions[index].questions.question_text;
+                const question = questions[index].questions;
                 const choices = questions[index].choices;
+		const pictureUrl = questions[index].picture;
                 let choicesHTML = '';
 
                 for (let ch_index = 0; ch_index < choices.length; ch_index++) {
@@ -29,8 +30,13 @@
                     `;
                 }
 
+		console.log(pictureUrl);
                 document.getElementById('question-container').innerHTML = `
-                    <h2>${question}</h2>
+		    <h2>体位: ${question.posture}</h2>
+		    <h2>刺激物: ${question.stimulus}</h2>
+		    <h2>项目: ${question.task}</h2>
+		    <img src="${pictureUrl}" alt="Question Picture" style="width: 300px; height: auto;">
+                    <h2>${question.question_text}</h2>
                     ${choicesHTML}
                 `;
             } else {
@@ -50,11 +56,9 @@
             }
 
             currentIndex++;
-            displayQuestion(currentIndex);
+            display_questios_a(currentIndex);
         });
-
-        // Initial display of the first question
-        displayQuestion(currentIndex);
+        display_questios_a(currentIndex);
     </script>
 </body>
 </html>

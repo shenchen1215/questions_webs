@@ -264,6 +264,7 @@ class QuestionsFromGroupView(generic.ListView):
 from django.http import JsonResponse
 import json
 from django.core.serializers import serialize
+from django.conf import settings
 
 class OperationQuestionsFromGroupView(generic.ListView):
     model = OperationQuestion
@@ -274,21 +275,26 @@ class OperationQuestionsFromGroupView(generic.ListView):
         age = get_age_by_username(user_name)
         group_type = {'user' : 1, 'staff' :2}
 
-        # Filter questions based on the user's age and role, and exclude all previously answered questions
-        operation_questions = OperationQuestion.objects.filter(
-            group__name=age,
-        )
-        
+        operation_questions_list = []
+
+        for type_index in range(1,6):
+            operation_questions_list.append(
+                    OperationQuestion.objects.filter(
+                    group__name = age,
+                    type=type_index
+                    )
+            )
         #for question in operation_questions:
         #    print(question.choice_set.all())
-        return operation_questions
+        print(f' MEDiA_url: {settings.MEDIA_URL}')
+        return operation_questions_list
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         user_name = self.kwargs['user_name']
 
         # Get the questions QuerySet
-        questions = self.get_queryset()
+        questions = self.get_queryset()[0]
         questions_list = list(questions.values())
         index = 0
         op_questions = []
@@ -297,10 +303,12 @@ class OperationQuestionsFromGroupView(generic.ListView):
             choice_list = []
             for choice in choices:
                 choice_list.append(choice.choice_text)
+            picture = Picture.objects.filter(id=questions_list[index]['picture_id'])[0]
             op_questions.append(
             {
                 'questions': questions_list[index],
                 'choices': choice_list,
+                'picture': f'{settings.MEDIA_URL}{picture}',
             }
             )
             index +=1
