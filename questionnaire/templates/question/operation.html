@@ -1,53 +1,80 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>operation questions</title>
+    <title>Next Question</title>
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script> <!-- include jQuery -->
 </head>
 <body>
-    <div id="data-container">
-        <h2 id="question"></h2>
-        <ul id="choices"></ul>
-        <button id="next-button">Next</button>
+    <div id="question-container">
+        <!-- Question and choices will be dynamically loaded here -->
     </div>
 
+    <button id="next-button">Next</button>
+
     <script>
-        // Define your data sets
-	const data0 = {{ data0|safe}};
-	const data1 = {{ data1 | safe}}
-	const questions = {{ questions | safe }}
+        const op_questions = {{ questions|safe }}; // Load your questions data here
+	const op_type = {{operation_type|safe }};
+        let currentIndex = 0;
+	let currentType = 1;
 
-        // Initialize variables
-        let currentDataIndex = 0;
+        function displayQuestion(index, choice, prevType) {
+		const currentTypeQuestions = op_questions[prevType];
+		const totalIndex = currentTypeQuestions.length;
+            // Your logic to fetch and display the question using AJAX
+            $.ajax({
+		    url: `next_question/?&totalIndex=${totalIndex}&_op_type=${prevType}&currentIndex=${index}&choice=${choice}`,
+                type: 'GET',
+                dataType: 'json',
+		    success: function (data) { 
+			const question = op_questions[currentType - 1][currentIndex].questions;
+			const choices = op_questions[currentType-1][currentIndex].choices;
+			const pictureUrl = op_questions[currentType-1][currentIndex].picture;
+			    console.log(totalIndex)
+			let choicesHTML = '';
 
-        // Function to update the displayed data
-        function updateData() {
-            const question = document.getElementById('question');
-            const choicesList = document.getElementById('choices');
-            const data = currentDataIndex === 0 ? data0 : data1;
+			for (let ch_index = 0; ch_index < choices.length; ch_index++) {
+			    choicesHTML += `
+				<label>
+				    <input type="radio" name="choice" value="${ch_index}">
+				    ${choices[ch_index]}
+				</label><br>
+			    `;
+			}
 
-           // question.textContent = data.question;
-	    question.textContent = questions[currentDataIndex].question_text;
-
-            // Clear previous choices
-            choicesList.innerHTML = '';
-
-            // Populate the choices
-            data.choices.forEach((choice) => {
-                const choiceItem = document.createElement('li');
-                choiceItem.textContent = choice;
-                choicesList.appendChild(choiceItem);
-            });
+			console.log(op_questions);
+			//console.log(pictureUrl);
+			document.getElementById('question-container').innerHTML = `
+			    <h1>测试类型: ${question.type}</h1>
+			    <h2>体位: ${question.posture}</h2>
+			    <h2>刺激物: ${question.stimulus}</h2>
+			    <h2>项目: ${question.task}</h2>
+			    <img src="${pictureUrl}" alt="Question Picture" style="width: 300px; height: auto;">
+			    <h2>${question.question_text}</h2>
+			    ${choicesHTML}
+			`;
+			    currentIndex = data.next_index;
+			    currentType = data.next_type;
+			    //currentIndex++;  // Increment the index for the next question
+			},
+			error: function (error) {
+			    console.error('Error fetching next question:', error);
+			}
+		    });
         }
 
-        // Initial data display
-        updateData();
-
-        // Handle "Next" button click
-        const nextButton = document.getElementById('next-button');
-        nextButton.addEventListener('click', () => {
-            currentDataIndex = (currentDataIndex + 1) % 2; // Toggle between 0 and 1
-            updateData();
+        document.getElementById('next-button').addEventListener('click', () => {
+            const selectedChoice = document.querySelector('input[name="choice"]:checked');
+            if (selectedChoice) {
+                const choiceId = selectedChoice.value;
+                console.log('Selected Choice ID:', choiceId);
+		displayQuestion(currentIndex, choiceId, currentType);
+            } else {
+                console.log('No choice selected');
+            }
         });
+
+        // Initial display of the first question
+        displayQuestion(currentIndex, -1, 0);
     </script>
 </body>
 </html>

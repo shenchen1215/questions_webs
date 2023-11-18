@@ -35,17 +35,18 @@ class Picture(models.Model):
     def __str__(self):
         return self.description
 
+OPERATION_CHOICES = [
+    (1, "粗大运动-姿势"),
+    (2, "粗大运动-移动"),
+    (3, "粗大运动-实物操作"),
+    (4, "精细运动-抓握"),
+    (5, "精细运动-视觉-运动整合")
+]
+
 class OperationQuestion(models.Model):
-    CHOICES = [
-        (1, "粗大运动-姿势"),
-        (2, "粗大运动-移动"),
-        (3, "粗大运动-实物操作"),
-        (4, "精细运动-抓握"),
-        (5, "精细运动-视觉-运动整合")
-    ]
     question_text = models.CharField(max_length=200)
     group = models.ForeignKey(Group, on_delete=models.CASCADE, default='12')
-    type = models.IntegerField(choices=CHOICES, default=1)  # Default to '1'
+    type = models.IntegerField(choices=OPERATION_CHOICES , default=1)  # Default to '1'
     picture = models.ForeignKey(Picture, on_delete=models.SET_NULL, null=True, blank=True)
     task = models.TextField(null=True, blank=True)
     stimulus = models.TextField(null=True, blank=True)
@@ -54,6 +55,14 @@ class OperationQuestion(models.Model):
 
     def __str__(self):
         return f"{self.get_type_display()}.{self.operation_id}.{self.question_text}"
+
+class UserOperationPoints(models.Model):
+    user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
+    type = models.IntegerField(choices=OPERATION_CHOICES , default=1)  # Default to '1'
+    operation_points = models.IntegerField(null=True, blank=True, default=0)
+
+    def __str__(self):
+        return f"{self.user_profile.user.username}'s points for {self.operation_question} - {self.operation_points}"
 
 class Question(models.Model):
     CHOICES = [
@@ -78,12 +87,10 @@ class Choice(models.Model):
     def __str__(self):
         return self.choice_text
 
-
 class UserResponse(models.Model):
     user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
     question = models.ForeignKey(Question, on_delete=models.CASCADE, null=True, blank=True)
     operation_question = models.ForeignKey(OperationQuestion, on_delete=models.CASCADE, null=True, blank=True)
-    operation_points = models.IntegerField(null=True, blank=True, default=0)
     choice = models.ForeignKey(Choice, on_delete=models.CASCADE)
     timestamp = models.DateTimeField(auto_now_add=True)
 

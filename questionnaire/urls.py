@@ -21,10 +21,10 @@ urlpatterns = [
     path('group-questions/<str:role>/<str:user_name>/', views.QuestionsFromGroupView.as_view(), name='group_questions'),
     path('operation_questions/<str:user_name>/', views.OperationQuestionsFromGroupView.as_view(), name='operation_questions'),
     path('results/submit_response/', views.SubmitResponseView.as_view(), name='submit_response'),
-    path('results/parents/<str:group_name>/', views.ResultsView.as_view(), name='results_page')
+    path('results/parents/<str:group_name>/', views.ResultsView.as_view(), name='results_page'),
+    path('operation_questions/<str:user_name>/next_question/', views.next_op_question, name='next_op_question'),
 ]
 
+# Serve media files during development
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-
-print(settings.BASE_DIR)

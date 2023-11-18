@@ -265,6 +265,43 @@ from django.http import JsonResponse
 import json
 from django.core.serializers import serialize
 from django.conf import settings
+    
+def get_unique_all_operation_questions(op_type):
+    # Assuming OPERATION_CHOICES is defined somewhere in your code
+
+    # Get all OperationQuestion objects with type=1
+    operation_questions = OperationQuestion.objects.filter(type=op_type)
+
+    # Create a dictionary to store unique operation_questions based on operation_id
+    unique_operation_questions = {}
+
+    # Iterate through the queryset and add each operation_question to the dictionary
+    for operation_question in operation_questions:
+        unique_operation_questions[operation_question.operation_id] = operation_question
+
+    # Retrieve the values from the dictionary to get unique instances
+    sorted_operation_questions = list(unique_operation_questions.values())
+
+    # Sort the list by operation_id
+    sorted_operation_questions = sorted(sorted_operation_questions, key=lambda x: x.operation_id)
+    return sorted_operation_questions
+def serialize_operation_question(question):
+    return {
+        'id': question.id,
+        'question_text': question.question_text,
+        'group_id': question.group_id,
+        'type': question.type,
+        'picture_id': question.picture_id,
+        'task': question.task,
+        'stimulus': question.stimulus,
+        'posture': question.posture,
+        'operation_id': question.operation_id,
+        'choices': [{'choice_text': choice.choice_text} for choice in question.choice_set.all()]
+    }
+
+def get_sorted_operation_with_choices(sorted_operation_questions):
+    questions_with_choices = [serialize_operation_question(question) for question in sorted_operation_questions]
+    return questions_with_choices
 
 class OperationQuestionsFromGroupView(generic.ListView):
     model = OperationQuestion
@@ -279,45 +316,107 @@ class OperationQuestionsFromGroupView(generic.ListView):
 
         for type_index in range(1,6):
             operation_questions_list.append(
-                    OperationQuestion.objects.filter(
-                    group__name = age,
-                    type=type_index
+                    get_unique_all_operation_questions(type_index)
                     )
-            )
-        #for question in operation_questions:
-        #    print(question.choice_set.all())
-        print(f' MEDiA_url: {settings.MEDIA_URL}')
+        
         return operation_questions_list
-    
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         user_name = self.kwargs['user_name']
 
-        # Get the questions QuerySet
-        questions = self.get_queryset()[0]
-        questions_list = list(questions.values())
-        index = 0
-        op_questions = []
-        for question in questions:
-            choices = question.choice_set.all()
-            choice_list = []
-            for choice in choices:
-                choice_list.append(choice.choice_text)
-            picture = Picture.objects.filter(id=questions_list[index]['picture_id'])[0]
-            op_questions.append(
-            {
-                'questions': questions_list[index],
-                'choices': choice_list,
-                'picture': f'{settings.MEDIA_URL}{picture}',
-            }
-            )
-            index +=1
-        print(op_questions)
- 
+        questions = self.get_queryset()
+        questions_list = []
+        for op_type in range(1,3):
+            q = get_sorted_operation_with_choices(questions[op_type-1])
+            questions_list.append(q)
+        
         context['current_index'] = self.kwargs.get('current_index', 0)
-        context['questions'] = op_questions
+        context['questions'] = questions_list
+        context['operation_type'] = 1
+
         return context
-   
+
+
+def get_user_profile(username):
+    try:
+        user = User.objects.get(username=username)
+        user_profile = user.userprofile
+        return user_profile
+    except User.DoesNotExist:
+        # Handle the case where the user with the given username doesn't exist
+        return None
+    except UserProfile.DoesNotExist:
+        # Handle the case where the user profile doesn't exist for the user
+        return None
+
+def get_question_index_from_age(age, op_type):
+    op_id = OperationQuestion.objects.filter(
+            group__name = age,
+            type = op_tyoe).operation_id
+    print(f'oooooppppp{op_id}')
+
+def get_all_operation_questions():
+    operation_questions_list = []
+
+    for type_index in range(1,6):
+        operation_questions_list.append(
+                get_unique_all_operation_questions(type_index)
+                )
+
+    questions_list = []
+    for index in range(1,3):
+        q = get_sorted_operation_with_choices(operation_questions_list[index-1])
+        questions_list.append(q)
+    return questions_list
+
+def next_op_question(request, user_name):
+    total_index = int(request.GET.get('totalIndex', 0))
+    op_type = int(request.GET.get('_op_type', 1))
+    op_index = int(request.GET.get('prevIndex', 2))
+    choice_index = int(request.GET.get('choice', 3))
+    # Get the UserProfile associated with the current user
+    user_profile = get_user_profile(user_name)
+
+    age = get_age_by_username(user_name)
+    group_type = {'user' : 1, 'staff' :2}
+
+    print(f'total_index={total_index}')
+    print(f'op_type={op_type}')
+    print(f'index={op_index}')
+    print(f'choice_index={choice_index}')
+    questions_list = get_all_operation_questions()
+    if choice_index != -1:
+        q = questions_list[op_type-1][op_index]
+        question = get_object_or_404(OperationQuestion, pk=q['id'])
+
+        print(question)
+        choices = Choice.objects.filter(operation_question = question)
+        selected_choice = choices[choice_index]
+
+        # Your logic to calculate operation_points based on the question and selected_choice
+        print(user_profile)
+        user_response = UserResponse.objects.create(
+            user_profile=user_profile,
+            operation_question=question,
+            choice=selected_choice,
+        )
+        print(user_response)
+    
+
+    if op_type == 1:
+        if op_index < total_index:
+            op_index += 1
+        else:
+            op_type += 1
+
+            op_index = 0
+    print(f'next_index={op_index}')
+    print(f'next_type={op_type}')
+
+    return JsonResponse({'next_index': op_index,
+                         'next_type': op_type,
+                         })
+
 # forms.py
 class QuestionForm(forms.Form):
     def __init__(self, question, *args, **kwargs):
@@ -391,7 +490,6 @@ def get_selected_choice(question_id):
     # Return the selected choice
     return selected_choice
 
-
     def get(self, request):
         # ... (your existing code for GET request)
         return render(request, self.template_name)
@@ -403,7 +501,6 @@ class SubmitResponseView(View):
         user_profile = request.user.userprofile  # Assuming the user is authenticated and has a UserProfile
         question_ids = [int(key.split('_')[1]) for key in request.POST if key.startswith('question_')]
         selected_choices = {question_id: int(request.POST[f'question_{question_id}']) for question_id in question_ids}
-
         # Save the user's responses to the database
         for question_id, choice_id in selected_choices.items():
             question = Question.objects.get(pk=question_id)
