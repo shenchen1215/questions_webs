@@ -10,72 +10,84 @@
         <!-- Question and choices will be dynamically loaded here -->
     </div>
 
-    <button id="next-button">Next</button>
+    <button id="prev-button">上一题</button>
+    <button id="next-button">下一题</button>
 
     <script>
-	const op_questions = {{questions|safe}};
-	const op_type = {{operation_type|safe }};
-	let prevIndex = 0;
+        const op_questions = {{ questions|safe }};
+        const op_type = {{ operation_type|safe }};
+        const op_answer_time = {{ op_answer_time|safe }};
         let currentIndex = 0;
-	let currentType = 1;
+        let currentType = 1;
 
-        function displayQuestion(prevIndex, choice, prevType) {
-	    let totalIndex = op_questions[currentType-1].length
-            // Your logic to fetch and display the question using AJAX
-            $.ajax({
-		    url: `next_question/?&totalIndex=${totalIndex}&_op_type=${prevType}&prevIndex=${prevIndex}&choice=${choice}`,
-                type: 'GET',
-                dataType: 'json',
-		    success: function (data) { 
-			const question = op_questions[currentType-1][currentIndex]
-			const choices = question.choices;
-			const pictureUrl = op_questions[currentType-1][currentIndex].picture;
-			let choicesHTML = '';
+        function displayQuestion() {
+            const question = op_questions[currentType-1][currentIndex]
+            const choices = question.choices;
+            const pictureUrl = op_questions[currentType-1][currentIndex].picture;
+            let choicesHTML = '';
 
-			for (let ch_index = 0; ch_index < choices.length; ch_index++) {
-			    choicesHTML += `
-				<label>
-				    <input type="radio" name="choice" value="${ch_index}">
-				    ${choices[ch_index].choice_text}
-				</label><br>
-			    `;
-			}
+            for (let ch_index = 0; ch_index < choices.length; ch_index++) {
+                choicesHTML += `
+                <label>
+                    <input type="radio" name="choice" value="${ch_index}">
+                    ${choices[ch_index].choice_text}
+                </label><br>
+                `;
+            }
 
 			//console.log(pictureUrl);
-			document.getElementById('question-container').innerHTML = `
-			    <h1>测试类型: ${question.type}</h1>
-			    <h2>体位: ${question.posture}</h2>
-			    <h2>刺激物: ${question.stimulus}</h2>
-			    <h2>项目: ${question.task}</h2>
-			    <img src="${pictureUrl}" alt="Question Picture" style="width: 300px; height: auto;">
-			    <h2>${question.question_text}</h2>
-			    ${choicesHTML}
-			`;
-			    prevIndex = currentIndex
-			    currentIndex = data.next_index;
-			    currentType = data.next_type;
-			    //currentIndex++;  // Increment the index for the next question
-			},
-			error: function (error) {
-			    console.error('Error fetching next question:', error);
-			}
-		    });
+            document.getElementById('question-container').innerHTML = `
+                <h1>测试类型: ${question.type}</h1>
+                <h2>体位: ${question.posture}</h2>
+                <h2>刺激物: ${question.stimulus}</h2>
+                <h2>项目: ${question.task}</h2>
+                <img src="${pictureUrl}" alt="Question Picture" style="width: 300px; height: auto;">
+                <h2>${question.operation_id}. ${question.question_text}</h2>
+                ${choicesHTML}
+            `;
         }
 
         document.getElementById('next-button').addEventListener('click', () => {
             const selectedChoice = document.querySelector('input[name="choice"]:checked');
             if (selectedChoice) {
+                let totalIndex = op_questions[currentType-1].length
                 const choiceId = selectedChoice.value;
                 console.log('Selected Choice ID:', choiceId);
-		displayQuestion(prevIndex, choiceId, currentType);
+		    $.ajax({
+                url: `next_question/?&totalIndex=${totalIndex}&_op_type=${currentType}&prevIndex=${currentIndex}&choice=${choiceId}&op_answer_time=${op_answer_time}`,
+			type: 'GET',
+			dataType: 'json',
+			    success: function (data) { 
+				    currentIndex = data.next_index;
+				    currentType = data.next_type;
+                    displayQuestion();
+				},
+			    error: function (error) {
+				    console.error('Error fetching next question:', error);
+				}
+			
+	        	});
             } else {
                 console.log('No choice selected');
             }
-		
+        });
+        document.getElementById('prev-button').addEventListener('click', () => {
+		    $.ajax({
+                url: `prev_question/?&totalIndex=${totalIndex}&_op_type=${currentType}&prevIndex=${currentIndex}&choice=${choiceId}&op_answer_time=${op_answer_time}`,
+			type: 'GET',
+			dataType: 'json',
+			    success: function (data) { 
+				},
+			    error: function (error) {
+				    console.error('Error fetching previous question:', error);
+				}
+			
+	        	});
         });
 
+
         // Initial display of the first question
-        displayQuestion(currentIndex, -1, 1);
+        displayQuestion();
     </script>
 </body>
 </html>

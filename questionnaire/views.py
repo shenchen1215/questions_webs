@@ -2,13 +2,18 @@ from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.views import generic, View
-from .models import Choice, Question, UserProfile, Group, UserResponse, Picture, OperationQuestion
+from .models import Choice, Question, UserProfile, Group, UserResponse, Picture, OperationQuestion, UserOperationPoints
+from django.db.models import Max
 from django.shortcuts import render, redirect
 from django.contrib.auth.models import User
 from django import forms
 from django.contrib.auth import login, authenticate
 from django.shortcuts import render, redirect
 from datetime import datetime
+from django.http import JsonResponse
+import json
+from django.core.serializers import serialize
+from django.conf import settings
 
 def get_age_by_username(username):
     try:
@@ -261,10 +266,6 @@ class QuestionsFromGroupView(generic.ListView):
             context['answered_no_questions'] = answered_no_questions
             return context
 
-from django.http import JsonResponse
-import json
-from django.core.serializers import serialize
-from django.conf import settings
     
 def get_unique_all_operation_questions(op_type):
     # Assuming OPERATION_CHOICES is defined somewhere in your code
@@ -329,13 +330,22 @@ class OperationQuestionsFromGroupView(generic.ListView):
         for op_type in range(1,3):
             q = get_sorted_operation_with_choices(questions[op_type-1])
             questions_list.append(q)
+
+        max_answer_time = UserResponse.objects.filter(
+                user_profile__user__username=user_name,
+                operation_question__type= 1
+                ).aggregate(max_answer=Max('answer_time'))['max_answer']
+
+        answer_time = 0
+        if max_answer_time is not None:
+            answer_time = max_answer_time + 1
         
         context['current_index'] = self.kwargs.get('current_index', 0)
         context['questions'] = questions_list
         context['operation_type'] = 1
+        context['op_answer_time'] = answer_time
 
         return context
-
 
 def get_user_profile(username):
     try:
@@ -353,7 +363,6 @@ def get_question_index_from_age(age, op_type):
     op_id = OperationQuestion.objects.filter(
             group__name = age,
             type = op_tyoe).operation_id
-    print(f'oooooppppp{op_id}')
 
 def get_all_operation_questions():
     operation_questions_list = []
@@ -369,11 +378,163 @@ def get_all_operation_questions():
         questions_list.append(q)
     return questions_list
 
+def save_user_response_for_operation(user_profile, op_question,answer_time, selected_choice):
+    try:
+        user_response = UserResponse.objects.get(
+            user_profile=user_profile,
+            operation_question=op_question,
+            answer_time = answer_time
+        )
+        user_response.choice = selected_choice
+        user_response.save()
+    except:
+        user_response = UserResponse.objects.create(
+            user_profile = user_profile,
+            operation_question = op_question,
+            choice = selected_choice,
+            answer_time = answer_time
+        )
+
+points_record = [-1 for i in range(100)]
+def calculate_operations_points_order(user_profile, op_type, answer_time, choice_point):
+    try:
+        user_points = UserOperationPoints.objects.get(
+                user_profile = user_profile,
+                type = op_type,
+                answer_time = answer_time
+        )
+        user_points.operation_points += choice_point
+    except:
+        user_points = UserOperationPoints.objects.create(
+                user_profile = user_profile,
+                type = op_type,
+                answer_time = answer_time,
+                operation_points = choice_point
+        )
+    print(user_points)
+def calculate_operations_points_random(user_profile, op_type, answer_time, top_index, bottom_index):
+    global points_record
+    choice_point = 2 * (top_index+1)
+    for index in range(top_index + 1, bottom_index+1):
+        choice_point += points_record[index]
+    user_points = UserOperationPoints.objects.create(
+            user_profile = user_profile,
+            type = op_type,
+            answer_time = answer_time,
+            operation_points = choice_point
+    )
+    print(user_points)
+
+def get_the_operation_questions_first_index(questions_list, age, op_type):
+    questions = OperationQuestion.objects.filter(
+            group__name = age,
+            type = op_type)
+    
+    index = 0
+    while index < len(questions_list[op_type - 1]):
+        if questions_list[op_type - 1][index]['operation_id'] == questions[0].operation_id:
+            return index
+        index += 1
+    return 0
+
+def get_the_continous(target_value):
+    global points_record
+    target_index = -1
+    count = 0
+    for i in range(len(points_record)):
+        if points_record[i] == target_value:
+            count += 1
+            if count == 3:
+                target_index = i
+                count = 0
+        else:
+            count = 0
+    return target_index
+
+def find_in_positive_direction(op_index, total_index):
+    global points_record
+    for index in range(op_index + 1, total_index):
+        if points_record[index] == -1:
+            return index
+    return -1
+
+def find_in_negative_direction(op_index):
+    global points_record
+    for index in range(op_index - 1, -1, -1):
+        if points_record[index] == -1:
+            return index
+    return -1
+
+def is_edge(op_index, total_index):
+    global points_record
+    if op_index + 1 == total_index and points_record[op_index - 1] != -1:
+        return True
+    if op_index - 1 == -1 and points_record[op_index + 1] != -1:
+        return True
+    return False
+
+def find_next2(op_index, total_index):
+    global points_record
+    if is_edge(op_index, total_index):
+        return -1
+    # select the direction
+    if points_record[op_index] == 2 and points_record[op_index + 1] == -1:
+        return find_in_positive_direction(op_index, total_index)
+    else:
+        return find_in_negative_direction(op_index)
+
+def find_next0(op_index, total_index):
+    if is_edge(op_index, total_index):
+        return -1
+    return find_in_positive_direction(op_index, total_index)
+
+def get_next_operation_index(args):
+    questions_list = args['questions_list']
+    op_type = args['op_type']
+    op_index = args['op_index']
+    age = args['age']
+    choice_point = args['choice_index']
+    user_profile = args['user_profile']
+    answer_time = args['answer_time']
+
+    global points_record
+    total_index = len(questions_list[op_type - 1])
+    if op_type == 1 or op_type == 4:
+        calculate_operations_points_order(user_profile, op_type, answer_time, choice_point)
+        if op_index < total_index - 1:
+            op_index += 1
+        else:
+            op_type += 1
+            op_index = get_the_operation_questions_first_index(questions_list, age, op_type)
+            points_record = [-1 for i in range(100)]
+            for i in range(total_index):
+                points_record[i] = -1
+    elif op_type == 2:
+        points_record[op_index] = choice_point
+        find_2 = get_the_continous(2)
+        find_0 = get_the_continous(0)
+        print(f'find_2={find_2} find_0={find_0}')
+        if find_2 != -1 and find_0 != -1:
+            print('END!!!!')
+            print(points_record)
+            calculate_operations_points_random(user_profile, op_type, answer_time, find_2, find_0)
+            op_type += 1
+            op_index = get_the_operation_questions_first_index(questions_list, age, op_type)
+        elif find_2 == -1:
+            op_index = find_next2(op_index, total_index)
+        else:
+            op_index = find_next0(op_index, total_index)
+            
+    print(f'next_index={op_index}')
+    print(f'next_type={op_type}')
+    return op_type, op_index
+
 def next_op_question(request, user_name):
     total_index = int(request.GET.get('totalIndex', 0))
     op_type = int(request.GET.get('_op_type', 1))
     op_index = int(request.GET.get('prevIndex', 2))
     choice_index = int(request.GET.get('choice', 3))
+    answer_time = int(request.GET.get('op_answer_time', 4))
     # Get the UserProfile associated with the current user
     user_profile = get_user_profile(user_name)
 
@@ -382,40 +543,31 @@ def next_op_question(request, user_name):
 
     print(f'total_index={total_index}')
     print(f'op_type={op_type}')
-    print(f'index={op_index}')
+    print(f'op_index={op_index}')
     print(f'choice_index={choice_index}')
+    print(f'answer_time={answer_time}')
     questions_list = get_all_operation_questions()
-    if choice_index != -1:
-        q = questions_list[op_type-1][op_index]
-        question = get_object_or_404(OperationQuestion, pk=q['id'])
-
-        print(question)
-        choices = Choice.objects.filter(operation_question = question)
-        selected_choice = choices[choice_index]
-
-        # Your logic to calculate operation_points based on the question and selected_choice
-        print(user_profile)
-        user_response = UserResponse.objects.create(
-            user_profile=user_profile,
-            operation_question=question,
-            choice=selected_choice,
-        )
-        print(user_response)
+    q = questions_list[op_type-1][op_index]
+    question = get_object_or_404(OperationQuestion, pk=q['id'])
+    choices = Choice.objects.filter(operation_question = question)
+    selected_choice = choices[choice_index]
     
-
-    if op_type == 1:
-        if op_index < total_index:
-            op_index += 1
-        else:
-            op_type += 1
-
-            op_index = 0
-    print(f'next_index={op_index}')
-    print(f'next_type={op_type}')
-
+    save_user_response_for_operation(user_profile, question, answer_time, selected_choice)
+    next_op_parameter = {'questions_list': questions_list,
+                         'op_type': op_type,
+                         'op_index': op_index,
+                         'age': age,
+                         'choice_index': choice_index,
+                         'user_profile': user_profile,
+                         'answer_time': answer_time,
+                         }
+    op_type, op_index = get_next_operation_index(next_op_parameter)
     return JsonResponse({'next_index': op_index,
                          'next_type': op_type,
                          })
+
+def prev_op_question(request, user_name):
+    print(user_name)
 
 # forms.py
 class QuestionForm(forms.Form):

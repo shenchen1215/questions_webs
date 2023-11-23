@@ -60,9 +60,10 @@ class UserOperationPoints(models.Model):
     user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
     type = models.IntegerField(choices=OPERATION_CHOICES , default=1)  # Default to '1'
     operation_points = models.IntegerField(null=True, blank=True, default=0)
+    answer_time = models.IntegerField(choices=OPERATION_CHOICES , default=-1, null=True, blank=True)
 
     def __str__(self):
-        return f"{self.user_profile.user.username}'s points for {self.operation_question} - {self.operation_points}"
+        return f"{self.user_profile.user.username}'s points for {self.get_type_display()} - {self.operation_points} in {self.answer_time} times"
 
 class Question(models.Model):
     CHOICES = [
@@ -93,7 +94,8 @@ class UserResponse(models.Model):
     operation_question = models.ForeignKey(OperationQuestion, on_delete=models.CASCADE, null=True, blank=True)
     choice = models.ForeignKey(Choice, on_delete=models.CASCADE)
     timestamp = models.DateTimeField(auto_now_add=True)
+    answer_time = models.IntegerField(choices=OPERATION_CHOICES , default=-1, null=True, blank=True)
 
     def __str__(self):
-        return f"{self.user_profile.user.username}'s response to {self.question} and {self.operation_question} - {self.choice.choice_text}"
+        return f"{self.id}{self.user_profile.user.username}'s response to {self.question} and {self.operation_question} - {self.choice.choice_text}"
 

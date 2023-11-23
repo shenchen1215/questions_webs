@@ -23,6 +23,7 @@ urlpatterns = [
     path('results/submit_response/', views.SubmitResponseView.as_view(), name='submit_response'),
     path('results/parents/<str:group_name>/', views.ResultsView.as_view(), name='results_page'),
     path('operation_questions/<str:user_name>/next_question/', views.next_op_question, name='next_op_question'),
+    path('operation_questions/<str:user_name>/prev_question/', views.prev_op_question, name='prev_op_question'),
 ]
 
 # Serve media files during development
