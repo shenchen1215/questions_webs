@@ -327,7 +327,7 @@ class OperationQuestionsFromGroupView(generic.ListView):
 
         questions = self.get_queryset()
         questions_list = []
-        for op_type in range(1,3):
+        for op_type in range(1,6):
             q = get_sorted_operation_with_choices(questions[op_type-1])
             questions_list.append(q)
 
@@ -373,7 +373,7 @@ def get_all_operation_questions():
                 )
 
     questions_list = []
-    for index in range(1,3):
+    for index in range(1,6):
         q = get_sorted_operation_with_choices(operation_questions_list[index-1])
         questions_list.append(q)
     return questions_list
@@ -431,6 +431,7 @@ def get_the_operation_questions_first_index(questions_list, age, op_type):
             type = op_type)
     
     index = 0
+    print(questions_list[op_type - 1])
     while index < len(questions_list[op_type - 1]):
         if questions_list[op_type - 1][index]['operation_id'] == questions[0].operation_id:
             return index
@@ -507,9 +508,7 @@ def get_next_operation_index(args):
             op_type += 1
             op_index = get_the_operation_questions_first_index(questions_list, age, op_type)
             points_record = [-1 for i in range(100)]
-            for i in range(total_index):
-                points_record[i] = -1
-    elif op_type == 2:
+    else:
         points_record[op_index] = choice_point
         find_2 = get_the_continous(2)
         find_0 = get_the_continous(0)
@@ -520,6 +519,7 @@ def get_next_operation_index(args):
             calculate_operations_points_random(user_profile, op_type, answer_time, find_2, find_0)
             op_type += 1
             op_index = get_the_operation_questions_first_index(questions_list, age, op_type)
+            points_record = [-1 for i in range(100)]
         elif find_2 == -1:
             op_index = find_next2(op_index, total_index)
         else:
@@ -541,11 +541,6 @@ def next_op_question(request, user_name):
     age = get_age_by_username(user_name)
     group_type = {'user' : 1, 'staff' :2}
 
-    print(f'total_index={total_index}')
-    print(f'op_type={op_type}')
-    print(f'op_index={op_index}')
-    print(f'choice_index={choice_index}')
-    print(f'answer_time={answer_time}')
     questions_list = get_all_operation_questions()
     q = questions_list[op_type-1][op_index]
     question = get_object_or_404(OperationQuestion, pk=q['id'])
