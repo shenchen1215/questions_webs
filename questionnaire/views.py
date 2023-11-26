@@ -15,6 +15,8 @@ import json
 from django.core.serializers import serialize
 from django.conf import settings
 
+points_record = [-1 for i in range(100)]
+
 def get_age_by_username(username):
     try:
         user = User.objects.get(username=username)
@@ -289,13 +291,12 @@ def get_unique_all_operation_questions(op_type):
 def serialize_operation_question(question):
     picture = Picture.objects.get(pk = question.picture_id).description
     picture = 'question_pictures/' + str(picture)
-    print(picture)
  
     return {
         'id': question.id,
         'question_text': question.question_text,
         'group_id': question.group_id,
-        'type': question.type,
+        'type': question.get_type_display(),
         'picture': picture,
         'task': question.task,
         'stimulus': question.stimulus,
@@ -307,6 +308,28 @@ def serialize_operation_question(question):
 def get_sorted_operation_with_choices(sorted_operation_questions):
     questions_with_choices = [serialize_operation_question(question) for question in sorted_operation_questions]
     return questions_with_choices
+
+def find_the_last_answer(user_name, last_answer_time, first_index):
+    if last_answer_time is None:
+        answer_time = 0
+        op_type = 1
+        op_index = first_index
+        return answer_time, op_type, op_index
+
+    user_profile = get_user_profile(user_name)
+    points = UserOperationPoints.objects.filter(user_profile = user_profile,
+                             answer_time = last_answer_time)
+    if len(points) == 5:
+        answer_time = last_answer_time + 1
+        op_type = 1
+        op_index = first_index
+    else:
+        latest_response = UserResponse.objects.filter(user_profile=user_profile).latest('timestamp')
+        op_index = latest_response.operation_question.operation_id - 1
+        op_type = latest_response.operation_question.type
+        answer_time = last_answer_time
+
+    return answer_time, op_type, op_index
 
 class OperationQuestionsFromGroupView(generic.ListView):
     model = OperationQuestion
@@ -339,13 +362,14 @@ class OperationQuestionsFromGroupView(generic.ListView):
                 operation_question__type= 1
                 ).aggregate(max_answer=Max('answer_time'))['max_answer']
 
-        answer_time = 0
-        if max_answer_time is not None:
-            answer_time = max_answer_time + 1
-        
-        context['current_index'] = self.kwargs.get('current_index', 0)
+        first_index = self.kwargs.get('current_index', 0)
+        answer_time, op_type, op_index = find_the_last_answer(user_name, max_answer_time, first_index)
+        print(answer_time, op_type, op_index) 
+        global points_record 
+        print(points_record)
+        context['current_index'] = op_index
         context['questions'] = questions_list
-        context['operation_type'] = 1
+        context['operation_type'] = op_type
         context['op_answer_time'] = answer_time
 
         return context
@@ -398,7 +422,6 @@ def save_user_response_for_operation(user_profile, op_question,answer_time, sele
             answer_time = answer_time
         )
 
-points_record = [-1 for i in range(100)]
 def calculate_operations_points_order(user_profile, op_type, answer_time, choice_point):
     try:
         user_points = UserOperationPoints.objects.get(
@@ -493,6 +516,25 @@ def find_next0(op_index, total_index):
         return -1
     return find_in_positive_direction(op_index, total_index)
 
+def one_type_end(end_dict):
+    global points_record
+
+    questions_list = end_dict['questions_list']
+    age = end_dict['age']
+    user_profile = end_dict['user_profile']
+    op_type = end_dict['op_type']
+    answer_time = end_dict['answer_time']
+    find_2 = end_dict['find_2']
+    find_0 = end_dict['find_0']
+    print('END!!!!')
+    print(points_record)
+    calculate_operations_points_random(user_profile, op_type, answer_time, find_2, find_0)
+    op_type += 1
+    op_index = get_the_operation_questions_first_index(questions_list, age, op_type)
+    points_record = [-1 for i in range(100)]
+
+    return op_type, op_index
+
 def get_next_operation_index(args):
     questions_list = args['questions_list']
     op_type = args['op_type']
@@ -517,16 +559,42 @@ def get_next_operation_index(args):
         find_0 = get_the_continous(0)
         print(f'find_2={find_2} find_0={find_0}')
         if find_2 != -1 and find_0 != -1:
-            print('END!!!!')
-            print(points_record)
-            calculate_operations_points_random(user_profile, op_type, answer_time, find_2, find_0)
-            op_type += 1
-            op_index = get_the_operation_questions_first_index(questions_list, age, op_type)
-            points_record = [-1 for i in range(100)]
+            dict_end = {'user_profile': user_profile,
+                        'questions_list': questions_list,
+                        'age': age,
+                        'op_type': op_type,
+                        'answer_time': answer_time,
+                        'find_2': find_2,
+                        'find_0': find_0,}
+            op_type, op_index = one_type_end(dict_end)
         elif find_2 == -1:
             op_index = find_next2(op_index, total_index)
+            #edge
+            if op_index == -1:
+                print('edge 22222')
+                first_index = get_the_operation_questions_first_index(questions_list, age, op_type)
+                dict_end = {'user_profile': user_profile,
+                            'questions_list': questions_list,
+                            'age': age,
+                            'op_type': op_type,
+                            'answer_time': answer_time,
+                            'find_2': 0,
+                            'find_0': first_index}
+                op_type, op_index = one_type_end(dict_end)
         else:
             op_index = find_next0(op_index, total_index)
+            #edge
+            if op_index == -1:
+                print('edge 00000')
+                dict_end = {'user_profile': user_profile,
+                            'questions_list': questions_list,
+                            'age': age,
+                            'op_type': op_type,
+                            'answer_time': answer_time,
+                            'find_2': find_2,
+                            'find_0': find_0,}
+                op_type, op_index = one_type_end(dict_end)
+
             
     print(f'next_index={op_index}')
     print(f'next_type={op_type}')

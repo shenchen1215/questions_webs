@@ -16,8 +16,8 @@
         const op_questions = {{ questions|safe }};
         const op_type = {{ operation_type|safe }};
         const op_answer_time = {{ op_answer_time|safe }};
-        let currentIndex = 0;
-        let currentType = 1;
+        let currentIndex ={{ current_index|safe }} ;
+        let currentType = op_type;
 
         function displayQuestion() {
             const question = op_questions[currentType-1][currentIndex]
