@@ -287,12 +287,16 @@ def get_unique_all_operation_questions(op_type):
     sorted_operation_questions = sorted(sorted_operation_questions, key=lambda x: x.operation_id)
     return sorted_operation_questions
 def serialize_operation_question(question):
+    picture = Picture.objects.get(pk = question.picture_id).description
+    picture = 'question_pictures/' + str(picture)
+    print(picture)
+ 
     return {
         'id': question.id,
         'question_text': question.question_text,
         'group_id': question.group_id,
         'type': question.type,
-        'picture_id': question.picture_id,
+        'picture': picture,
         'task': question.task,
         'stimulus': question.stimulus,
         'posture': question.posture,
@@ -318,8 +322,7 @@ class OperationQuestionsFromGroupView(generic.ListView):
         for type_index in range(1,6):
             operation_questions_list.append(
                     get_unique_all_operation_questions(type_index)
-                    )
-        
+                    ) 
         return operation_questions_list
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -426,12 +429,13 @@ def calculate_operations_points_random(user_profile, op_type, answer_time, top_i
     print(user_points)
 
 def get_the_operation_questions_first_index(questions_list, age, op_type):
+    if op_type not in range(1, 6):
+        return -1
     questions = OperationQuestion.objects.filter(
             group__name = age,
             type = op_type)
     
     index = 0
-    print(questions_list[op_type - 1])
     while index < len(questions_list[op_type - 1]):
         if questions_list[op_type - 1][index]['operation_id'] == questions[0].operation_id:
             return index
@@ -502,8 +506,7 @@ def get_next_operation_index(args):
     total_index = len(questions_list[op_type - 1])
     if op_type == 1 or op_type == 4:
         calculate_operations_points_order(user_profile, op_type, answer_time, choice_point)
-        if op_index < total_index - 1:
-            op_index += 1
+        if op_index < total_index - 1: op_index += 1
         else:
             op_type += 1
             op_index = get_the_operation_questions_first_index(questions_list, age, op_type)
@@ -528,6 +531,15 @@ def get_next_operation_index(args):
     print(f'next_index={op_index}')
     print(f'next_type={op_type}')
     return op_type, op_index
+
+def serialize_operation_points(points):
+    instance = UserOperationPoints.objects.get(pk = points[0]['id'])
+    type_display = instance.get_type_display()
+    return {
+        'id': points[0]['id'],
+        'type': type_display,
+        'point': points[0]['operation_points'],
+    }
 
 def next_op_question(request, user_name):
     total_index = int(request.GET.get('totalIndex', 0))
@@ -557,8 +569,20 @@ def next_op_question(request, user_name):
                          'answer_time': answer_time,
                          }
     op_type, op_index = get_next_operation_index(next_op_parameter)
+    op_points = []
+    if op_type == 6:
+        for _type in range(1, 6):
+            points = UserOperationPoints.objects.filter(
+                    user_profile = user_profile,
+                    type = _type,
+                    answer_time = answer_time,
+                    ).values()
+            print(points)
+            op_points.append(serialize_operation_points(points))
+    
     return JsonResponse({'next_index': op_index,
                          'next_type': op_type,
+                         'op_points': op_points,
                          })
 
 def prev_op_question(request, user_name):

@@ -1,4 +1,4 @@
-
+{% load static %}
 <!DOCTYPE html>
 <html>
 <head>
@@ -10,7 +10,6 @@
         <!-- Question and choices will be dynamically loaded here -->
     </div>
 
-    <button id="prev-button">上一题</button>
     <button id="next-button">下一题</button>
 
     <script>
@@ -35,16 +34,30 @@
                 `;
             }
 
-			//console.log(pictureUrl);
             document.getElementById('question-container').innerHTML = `
                 <h1>测试类型: ${question.type}</h1>
                 <h2>体位: ${question.posture}</h2>
                 <h2>刺激物: ${question.stimulus}</h2>
                 <h2>项目: ${question.task}</h2>
-                <img src="${pictureUrl}" alt="Question Picture" style="width: 300px; height: auto;">
+                <img src="{% static '' %}${pictureUrl}" alt="Question Picture" style="width: 300px; height: auto;">
                 <h2>${question.operation_id}. ${question.question_text}</h2>
                 ${choicesHTML}
             `;
+        }
+
+        function showResults(points) {
+            let resultHTML = '<h1> Thanks </h1>';
+            let totalPoints = 0;
+
+            for (let i = 0; i < points.length; i++) {
+                resultHTML += `<h1>${points[i].type} ${points[i].point}</h1>`;
+                totalPoints += points[i].point;
+            }
+            resultHTML += `<h1>总分: ${totalPoints}</h1>`;
+            document.getElementById('question-container').innerHTML = resultHTML;
+
+            // Hide the next-button
+            document.getElementById('next-button').style.display = 'none';
         }
 
         document.getElementById('next-button').addEventListener('click', () => {
@@ -60,7 +73,10 @@
 			    success: function (data) { 
 				    currentIndex = data.next_index;
 				    currentType = data.next_type;
-                    displayQuestion();
+                    if (currentType < 6)
+                        displayQuestion();
+                    else
+                        showResults(data.op_points);
 				},
 			    error: function (error) {
 				    console.error('Error fetching next question:', error);
@@ -71,20 +87,6 @@
                 console.log('No choice selected');
             }
         });
-        document.getElementById('prev-button').addEventListener('click', () => {
-		    $.ajax({
-                url: `prev_question/?&totalIndex=${totalIndex}&_op_type=${currentType}&prevIndex=${currentIndex}&choice=${choiceId}&op_answer_time=${op_answer_time}`,
-			type: 'GET',
-			dataType: 'json',
-			    success: function (data) { 
-				},
-			    error: function (error) {
-				    console.error('Error fetching previous question:', error);
-				}
-			
-	        	});
-        });
-
 
         // Initial display of the first question
         displayQuestion();

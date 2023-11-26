@@ -54,7 +54,7 @@ class OperationQuestion(models.Model):
     operation_id = models.IntegerField(null=True, blank=True, default=-1)
 
     def __str__(self):
-        return f"{self.get_type_display()}.{self.operation_id}.{self.question_text}"
+        return f"{self.get_type_display()}.{self.operation_id}.{self.question_text}.{self.picture}"
 
 class UserOperationPoints(models.Model):
     user_profile = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
