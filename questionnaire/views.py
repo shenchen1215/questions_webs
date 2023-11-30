@@ -15,8 +15,8 @@ import json
 from django.core.serializers import serialize
 from django.conf import settings
 
-points_record = [-1 for i in range(100)]
-
+# points_record = [-1 for i in range(100)]
+points_record = {}
 def get_age_by_username(username):
     try:
         user = User.objects.get(username=username)
@@ -442,7 +442,7 @@ def calculate_operations_points_random(user_profile, op_type, answer_time, top_i
     global points_record
     choice_point = 2 * (top_index+1)
     for index in range(top_index + 1, bottom_index+1):
-        choice_point += points_record[index]
+        choice_point += points_record[user_profile.id][index]
     user_points = UserOperationPoints.objects.create(
             user_profile = user_profile,
             type = op_type,
@@ -465,12 +465,12 @@ def get_the_operation_questions_first_index(questions_list, age, op_type):
         index += 1
     return 0
 
-def get_the_continous(target_value):
+def get_the_continous(target_value, user_profile):
     global points_record
     target_index = -1
     count = 0
-    for i in range(len(points_record)):
-        if points_record[i] == target_value:
+    for i in range(len(points_record[user_profile.id])):
+        if points_record[user_profile.id][i] == target_value:
             count += 1
             if count == 3:
                 target_index = i
@@ -479,44 +479,44 @@ def get_the_continous(target_value):
             count = 0
     return target_index
 
-def find_in_positive_direction(op_index, total_index):
+def find_in_positive_direction(op_index, total_index, user_profile):
     global points_record
     for index in range(op_index + 1, total_index):
-        if points_record[index] == -1:
+        if points_record[user_profile.id][index] == -1:
             return index
     return -1
 
-def find_in_negative_direction(op_index):
+def find_in_negative_direction(op_index, user_profile):
     global points_record
     for index in range(op_index - 1, -1, -1):
-        if points_record[index] == -1:
+        if points_record[user_profile.id][index] == -1:
             return index
     return -1
 
-def is_edge(op_index, total_index):
+def is_edge(op_index, total_index, user_profile):
     global points_record
-    if op_index + 1 == total_index and points_record[op_index - 1] != -1:
+    if op_index + 1 == total_index and points_record[user_profile.id][op_index - 1] != -1:
         return True
-    if op_index - 1 == -1 and points_record[op_index + 1] != -1:
+    if op_index - 1 == -1 and points_record[user_profile.id][op_index + 1] != -1:
         return True
     return False
 
-def find_next2(op_index, total_index):
+def find_next2(op_index, total_index, user_profile):
     global points_record
-    if is_edge(op_index, total_index):
+    if is_edge(op_index, total_index, user_profile):
         return -1
     # select the direction
-    if points_record[op_index] == 2 and points_record[op_index + 1] == -1:
-        return find_in_positive_direction(op_index, total_index)
+    if points_record[user_profile.id][op_index] == 2 and points_record[user_profile.id][op_index + 1] == -1:
+        return find_in_positive_direction(op_index, total_index, user_profile)
     else:
-        return find_in_negative_direction(op_index)
+        return find_in_negative_direction(op_index, user_profile)
 
-def find_next0(op_index, total_index):
-    if is_edge(op_index, total_index):
+def find_next0(op_index, total_index, user_profile):
+    if is_edge(op_index, total_index, user_profile):
         return -1
-    return find_in_positive_direction(op_index, total_index)
+    return find_in_positive_direction(op_index, total_index, user_profile)
 
-def one_type_end(end_dict):
+def one_type_end(end_dict, user_profile):
     global points_record
 
     questions_list = end_dict['questions_list']
@@ -527,11 +527,11 @@ def one_type_end(end_dict):
     find_2 = end_dict['find_2']
     find_0 = end_dict['find_0']
     print('END!!!!')
-    print(points_record)
+    print(points_record[user_profile.id])
     calculate_operations_points_random(user_profile, op_type, answer_time, find_2, find_0)
     op_type += 1
     op_index = get_the_operation_questions_first_index(questions_list, age, op_type)
-    points_record = [-1 for i in range(100)]
+    points_record[user_profile.id] = [-1 for i in range(100)]
 
     return op_type, op_index
 
@@ -552,11 +552,13 @@ def get_next_operation_index(args):
         else:
             op_type += 1
             op_index = get_the_operation_questions_first_index(questions_list, age, op_type)
-            points_record = [-1 for i in range(100)]
+            print(points_record)
+            points_record[user_profile.id] = [-1 for i in range(100)]
     else:
-        points_record[op_index] = choice_point
-        find_2 = get_the_continous(2)
-        find_0 = get_the_continous(0)
+        print(points_record)
+        points_record[user_profile.id][op_index] = choice_point
+        find_2 = get_the_continous(2, user_profile)
+        find_0 = get_the_continous(0, user_profile)
         print(f'find_2={find_2} find_0={find_0}')
         if find_2 != -1 and find_0 != -1:
             dict_end = {'user_profile': user_profile,
@@ -566,9 +568,9 @@ def get_next_operation_index(args):
                         'answer_time': answer_time,
                         'find_2': find_2,
                         'find_0': find_0,}
-            op_type, op_index = one_type_end(dict_end)
+            op_type, op_index = one_type_end(dict_end, user_profile)
         elif find_2 == -1:
-            op_index = find_next2(op_index, total_index)
+            op_index = find_next2(op_index, total_index, user_profile)
             #edge
             if op_index == -1:
                 print('edge 22222')
@@ -582,7 +584,7 @@ def get_next_operation_index(args):
                             'find_0': first_index}
                 op_type, op_index = one_type_end(dict_end)
         else:
-            op_index = find_next0(op_index, total_index)
+            op_index = find_next0(op_index, total_index, user_profile)
             #edge
             if op_index == -1:
                 print('edge 00000')
@@ -593,7 +595,7 @@ def get_next_operation_index(args):
                             'answer_time': answer_time,
                             'find_2': find_2,
                             'find_0': find_0,}
-                op_type, op_index = one_type_end(dict_end)
+                op_type, op_index = one_type_end(dict_end, user_profile)
 
             
     print(f'next_index={op_index}')

@@ -1,0 +1,35 @@
+/* style.css */
+
+/* Add your styles here */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+#question-container {
+	background-color: #f2f2f2; /* Set background color */
+	padding: 20px; /* Add some padding for better readability */
+}
+
+.question-content {
+    display: flex;
+    align-items: center; /* Align items vertically */
+}
+
+.text-content {
+}
+
+.question-content img{
+    width: 300px; /* Set the width of the image */
+    height: auto; /* Maintain aspect ratio */
+}
+
+button {
+    background-color: #4caf50;
+    color: #fff;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+}
+

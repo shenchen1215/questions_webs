@@ -2,6 +2,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+	<link rel="stylesheet" type="text/css" href="{% static 'question/style.css' %}">
     <title>Next Question</title>
     <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script> <!-- include jQuery -->
 </head>
@@ -38,8 +39,12 @@
                 <h1>测试类型: ${question.type}</h1>
                 <h2>体位: ${question.posture}</h2>
                 <h2>刺激物: ${question.stimulus}</h2>
-                <h2>项目: ${question.task}</h2>
-                <img src="{% static '' %}${pictureUrl}" alt="Question Picture" style="width: 300px; height: auto;">
+		<div class="question-content">
+			<div class="text-content">
+			    <h2>项目: ${question.task}</h2>
+			</div>
+		<img src="{% static '' %}${pictureUrl}" alt="Question Picture">
+		</div>
                 <h2>${question.operation_id}. ${question.question_text}</h2>
                 ${choicesHTML}
             `;
