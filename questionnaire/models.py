@@ -7,12 +7,12 @@ from django.contrib.auth.models import User
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
+    telephone = models.CharField(max_length=15, null=True, blank=True)
     birth_date = models.DateField(null=True, blank=True)  # Use DateField for date of birth
     role = models.CharField(max_length=20, choices=[('admin', 'Admin'), ('user', 'Normal User'), ('staff', 'Staff')], default='user')
 
     def __str__(self):
         return self.user.username  # Represent the user profile by username
-
 
 from django.db import models
 
@@ -28,6 +28,7 @@ class Group(models.Model):
     def __str__(self):
         type_display = self.get_type_display()
         return f'{self.name}_{type_display}'
+
 class Picture(models.Model):
     image = models.ImageField(upload_to='templates/question_pictures')
     description = models.CharField(max_length=200, null=True, blank=True)

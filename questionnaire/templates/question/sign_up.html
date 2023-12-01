@@ -7,21 +7,23 @@
     <h1>Create a New User</h1>
     <form method="post" action="{% url 'questionnaire:sign_up' %}">
         {% csrf_token %}
-        <label for="username">Username:</label>
+        <label for="username">姓名:</label>
         <input type="text" id="username" name="username" required>
         <br>
-        <label for="password">Password:</label>
+        <label for="telephone">电话:</label>
+        <input type="text" id="telephone" name="telephone" pattern="\d+" title="Please enter only digits" required>
+        <br>
+        <label for="password">密码:</label>
         <input type="password" id="password" name="password" required>
         <br>
-        <label for="password_confirm">Confirm Password:</label>
+        <label for="password_confirm">确认密码:</label>
         <input type="password" id="password_confirm" name="password_confirm" required>
         <br>
-        <label for="birthday_date">Birthday Date:</label>
+        <label for="birthday_date">生日:</label>
         <input type="date" id="birthday_date" name="birthday_date" required>
         <br>
 	<label for="role">Role:</label>
         <select id="role" name="role">
-            <option value="admin">Admin</option>
             <option value="user">Normal User</option>
             <option value="staff">Staff</option>
         </select><br>

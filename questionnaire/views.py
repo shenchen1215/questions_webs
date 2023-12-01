@@ -68,11 +68,11 @@ class SignUpViews(generic.ListView):
 
 class SignUpForm(forms.Form):
     username = forms.CharField()
+    telephone = forms.CharField()  # Add the telephone field
     password = forms.CharField(widget=forms.PasswordInput())
     password_confirm = forms.CharField(widget=forms.PasswordInput())  # Password confirmation field
     birthday_date = forms.DateField(required=False)
-    role = forms.ChoiceField(choices=[('admin', 'Admin'), ('user', 'Normal User'), ('staff', 'Staff')])
-    
+    role = forms.ChoiceField(choices=[('user', 'Normal User'), ('staff', 'Staff')])
 
     def clean(self):
         cleaned_data = super().clean()
@@ -82,23 +82,27 @@ class SignUpForm(forms.Form):
         if password != password_confirm:
             raise forms.ValidationError("The passwords do not match. Please try again.")
 
-
 def sign_up(request):
     if request.method == "POST":
         form = SignUpForm(request.POST)
         if form.is_valid():
             username = form.cleaned_data['username']
+            telephone = form.cleaned_data['telephone']
             password = form.cleaned_data['password']
             birthday_date = form.cleaned_data['birthday_date']
             role = form.cleaned_data['role']
+
+            print(telephone)
             # Check if the username already exists
-            if User.objects.filter(username=username).exists():
+            if UserProfile.objects.filter(user__username=username, telephone=telephone).exists():
+                print("eeeeee!!!!!!!!")
                 return render(request, 'question/sign_up.html', {'form': form, 'error_message': 'Username already exists'})
 
             user = User.objects.create_user(username=username, password=password)
             user.save()
         
-            user_profile = UserProfile(user=user, birth_date=birthday_date, role=role)
+            user_profile = UserProfile(user=user, birth_date=birthday_date,
+                                       role=role, telephone=telephone)
             user_profile.save()
             login(request, user)
             if role == 'staff':
@@ -109,6 +113,7 @@ def sign_up(request):
 
             return HttpResponseRedirect(reverse('questionnaire:group_questions', args=[role,username]))
         else:
+            print(form.errors)
             # Form is not valid, show the form with errors
             return render(request, 'question/sign_up.html', {'form': form})
 
