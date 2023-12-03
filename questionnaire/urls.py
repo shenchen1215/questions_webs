@@ -10,7 +10,7 @@ from django.conf.urls.static import static
 
 app_name = "questionnaire"
 urlpatterns = [
-    path("", views.IndexView.as_view(), name="index"),
+    path("", views.HomeView.as_view(), name="homepage"),
     path("<int:pk>/", views.DetailView.as_view(), name="detail"),
     path("create_question/", views.create_question, name="create_question"),
     path("question/", views.CreateQuestionViews.as_view(), name="create"),

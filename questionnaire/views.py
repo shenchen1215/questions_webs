@@ -33,8 +33,8 @@ def get_age_by_username(username):
     except UserProfile.DoesNotExist:
         return None  # Handle the case where the user doesn't have a user profile
 
-class IndexView(generic.ListView):
-    template_name = "question/index.html"
+class HomeView(generic.ListView):
+    template_name = "question/homepage.html"
     context_object_name = "latest_question_list"
     model = Question
 
@@ -124,7 +124,7 @@ def sign_up(request):
 class LoginForm(forms.Form):
     username = forms.CharField()
     password = forms.CharField(widget=forms.PasswordInput)
-    role = forms.ChoiceField(choices=[('admin', 'Admin'), ('user', 'Normal User'), ('staff', 'Staff')])
+    role = forms.ChoiceField(choices=[('user', 'Normal User'), ('staff', 'Staff')])
 
 def user_login(request):
     if request.method == "POST":
@@ -196,7 +196,7 @@ def create_question(request):
             Choice.objects.create(question=new_question, choice_text=choice2)
 
             # Redirect to a thank-you page or another appropriate view
-            return HttpResponseRedirect(reverse("questionnaire:index"))
+            return HttpResponseRedirect(reverse("questionnaire:homepage"))
 
         return redirect('no question')
     else:
@@ -587,7 +587,7 @@ def get_next_operation_index(args):
                             'answer_time': answer_time,
                             'find_2': 0,
                             'find_0': first_index}
-                op_type, op_index = one_type_end(dict_end)
+                op_type, op_index = one_type_end(dict_end, user_profile)
         else:
             op_index = find_next0(op_index, total_index, user_profile)
             #edge
