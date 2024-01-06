@@ -14,12 +14,27 @@ from django.http import JsonResponse
 import json
 from django.core.serializers import serialize
 from django.conf import settings
+from django.utils import timezone
+from openpyxl import Workbook
+from django.http import HttpResponse
 
 # points_record = [-1 for i in range(100)]
 points_record = {}
-def get_age_by_username(username):
+
+def get_user_profile(user_id):
     try:
-        user = User.objects.get(username=username)
+        user = User.objects.get(id=user_id)
+        user_profile = user.userprofile
+        return user_profile
+    except User.DoesNotExist:
+        return None
+    except UserProfile.DoesNotExist:
+        # Handle the case where the user profile doesn't exist for the user
+        return None
+
+def get_age_by_userid(user_id):
+    try:
+        user = User.objects.get(id=user_id)
         user_profile = UserProfile.objects.get(user=user)
         birth_date = user_profile.birth_date
 
@@ -44,16 +59,72 @@ class HomeView(generic.ListView):
 
 class StaffQuestions(generic.ListView):
     template_name = "question/staff_questions.html"
-    context_object_name = "babies_list"
     model = UserProfile
 
-    def get_queryset(self):
-        return UserProfile.objects.filter(role='user')
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user_id = self.kwargs.get('user_id', '0')
+        user = User.objects.get(id=user_id)
+        user_profile = UserProfile.objects.get(user=user)
+        location = user_profile.hospital
+        context['babies_list'] = UserProfile.objects.filter(role='user', hospital=location)
+        context['staff_id'] = user_id
+        return context
+
+
+def export_excel(request):
+    print('excel')
+    # Your logic to fetch data goes here
+    data_head = ["姓名", "性别", "年龄", "卡号", "测试项目",
+             "总题数", "答对个数", "正确率",  "训练日期"]
+
+    # Create a new workbook and add a worksheet
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet.append(data_head)
+
+    all_response = UserResponse.objects.all()
+    op_list = get_all_operation_questions()
+    record_type = {}
+    for response in all_response:
+        if response.operation_question is not None:
+            user_name = response.user_profile.user.username
+            user_id = response.user_profile.user_id
+            op_type = response.operation_question.type
+            if user_id not in record_type.keys():
+                record_type[user_id] = [op_type]
+            elif op_type not in record_type[user_id]:
+                record_type[user_id].append(op_type)
+            else:
+                continue
+            op_type_display = response.operation_question.get_type_display()
+            gender = response.user_profile.gender
+            birth_date = str(response.user_profile.birth_date)
+            user_id = response.user_profile.user_id
+            op_nums = len(op_list[op_type - 1])
+            points = UserOperationPoints.objects.filter(
+                    user_profile = response.user_profile,
+                    type = op_type,
+                    answer_time = 0,
+                    ).values()
+            op_points = serialize_operation_points(points)
+            op_points = op_points['point']
+            timestamp = str(response.timestamp)
+            row_data = [user_name, gender, birth_date, user_id, op_type_display, op_nums * 2, op_points, op_points / (op_nums * 2), timestamp]
+            print(row_data)
+            # Write your data to the worksheet
+            worksheet.append(row_data)
+
+    # Create a response with the Excel file
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename=export_data.xlsx'
+    workbook.save(response)
+
+    return response
 
 class DetailView(generic.DetailView):
     model = Question
     template_name = "question/detail.html"
-
 
 class CreateQuestionViews(generic.ListView):
     model = Question
@@ -61,6 +132,17 @@ class CreateQuestionViews(generic.ListView):
     def get_queryset(self):
         """Return the last five published questions."""
         return Question.objects.order_by("id")[:5]
+
+class HomepageUserView(generic.ListView):
+    template_name = "question/homepage_login.html"
+    model = UserProfile
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user_id = self.kwargs.get('user_id', '0')
+        user_profile = get_user_profile(user_id)
+        context['user_profile'] = user_profile
+        return context
 
 class SignUpViews(generic.ListView):
     model = Question
@@ -73,6 +155,8 @@ class SignUpForm(forms.Form):
     password_confirm = forms.CharField(widget=forms.PasswordInput())  # Password confirmation field
     birthday_date = forms.DateField(required=False)
     role = forms.ChoiceField(choices=[('user', 'Normal User'), ('staff', 'Staff')])
+    gender = forms.ChoiceField(choices=UserProfile.GENDER_CHOICES)
+    hospital = forms.ChoiceField(choices=UserProfile.HOSPITAL_CHOICES)
 
     def clean(self):
         cleaned_data = super().clean()
@@ -91,58 +175,56 @@ def sign_up(request):
             password = form.cleaned_data['password']
             birthday_date = form.cleaned_data['birthday_date']
             role = form.cleaned_data['role']
-
-            print(telephone)
+            gender = form.cleaned_data['gender']
+            hospital = form.cleaned_data['hospital']
             # Check if the username already exists
             if UserProfile.objects.filter(user__username=username, telephone=telephone).exists():
-                print("eeeeee!!!!!!!!")
                 return render(request, 'question/sign_up.html', {'form': form, 'error_message': 'Username already exists'})
 
             user = User.objects.create_user(username=username, password=password)
             user.save()
-        
             user_profile = UserProfile(user=user, birth_date=birthday_date,
-                                       role=role, telephone=telephone)
+                                       role=role, telephone=telephone,gender=gender, hospital=hospital)
+            user_id = user_profile.user_id
             user_profile.save()
             login(request, user)
             if role == 'staff':
-                return HttpResponseRedirect(reverse('questionnaire:staff_questions'))
+                return HttpResponseRedirect(reverse('questionnaire:staff_questions', args=[user_id]))
             current_date = datetime.now()
             age_in_months = (current_date.year - birthday_date.year) * 12 + (current_date.month - birthday_date.month)
             group_name = str(age_in_months)
 
-            return HttpResponseRedirect(reverse('questionnaire:group_questions', args=[role,username]))
+            return HttpResponseRedirect(reverse('questionnaire:homepage_user', args=[user_id]))
         else:
             print(form.errors)
             # Form is not valid, show the form with errors
             return render(request, 'question/sign_up.html', {'form': form})
-
     else:
         form = SignUpForm()
     return render(request, 'question/sign_up.html', {'form': form})
 
 class LoginForm(forms.Form):
-    username = forms.CharField()
+    userid = forms.CharField()
     password = forms.CharField(widget=forms.PasswordInput)
-    role = forms.ChoiceField(choices=[('user', 'Normal User'), ('staff', 'Staff')])
 
 def user_login(request):
     if request.method == "POST":
         form = LoginForm(request.POST)
         if form.is_valid():
-            username = form.cleaned_data['username']
+            user_id = form.cleaned_data['userid']
             password = form.cleaned_data['password']
-            role = form.cleaned_data['role']
-            user = authenticate(request, username=username, password=password)
-            if user is not None:
-                if user.is_superuser or user.is_staff:
-                    return HttpResponseRedirect(reverse("questionnaire:create_question"))
-                login(request, user)
-                if role == 'staff':
-                    return HttpResponseRedirect(reverse('questionnaire:staff_questions'))
-                age = get_age_by_username(username)
-                group_name = str(age)
-                return HttpResponseRedirect(reverse('questionnaire:group_questions', args=[role,username]))
+            user = authenticate(request, userid=user_id, password=password)
+            user_profile = get_user_profile(user_id)
+            print(f'login user_profile id={user_id}')
+            if user_profile is not None:
+                if user_profile.role == 'staff':
+                    login(request, user)
+                    return HttpResponseRedirect(reverse('questionnaire:staff_questions', args=[user_id]))
+                elif user_profile.role == 'user':
+                    login(request, user)
+                    age = get_age_by_userid(user_id)
+                    group_name = str(age)
+                    return HttpResponseRedirect(reverse('questionnaire:homepage_user', args=[user_id]))
             else:
                 print('user is not valid')
         else:
@@ -230,29 +312,27 @@ class QuestionsFromGroupView(generic.ListView):
     template_name = "question/group_questions.html"
     
     def get_queryset(self):
-        role = self.kwargs.get('role', '1')
-        group_type = {'user' : 1, 'staff':2}
-        user_name = self.kwargs.get('user_name', '1')
-        age = get_age_by_username(user_name)
+        user_id = self.kwargs.get('user_id', '0')
+        age = get_age_by_userid(user_id)
+        print(f'{user_id}+{age}')
 
         # Filter user responses where the choice is 'no'
         user_responses_no = UserResponse.objects.filter(
-            user_profile__user__username=user_name,
+            user_profile__user__id=user_id,
             choice__choice_text='还不能'
         ).values_list('question', flat=True)
 
         # Filter questions where the ID is in the user_responses_no
         answered_no_questions = Question.objects.filter(id__in=user_responses_no)
-
         # Get the IDs of questions the user has answered
         user_responses = UserResponse.objects.filter(
-            user_profile__user__username=user_name
+            user_profile__user__id=user_id,
         ).values_list('question', flat=True)
 
         # Filter questions based on the user's age and role, and exclude all previously answered questions
         new_questions = Question.objects.filter(
             group__name=age,
-            group__type=group_type[role]
+            group__type=1,
         ).exclude(id__in=user_responses)
 
         all_questions = Question.objects.all()
@@ -262,10 +342,8 @@ class QuestionsFromGroupView(generic.ListView):
 
     def get_context_data(self, **kwargs):
             context = super().get_context_data(**kwargs)
-            user_name = self.kwargs.get('user_name', '1')  # Default to '1' if not provided
-            context['user_name'] = user_name
-            role = self.kwargs.get('role', '1')  # Default to '1' if not provided
-            context['role'] = role
+            user_id = self.kwargs.get('user_id', '0')  # Default to '1' if not provided
+            context['user_id'] = user_id
 
             # Access 'new_questions' and 'answered_no_questions' from get_queryset
             new_questions, answered_no_questions = self.get_queryset()
@@ -314,14 +392,14 @@ def get_sorted_operation_with_choices(sorted_operation_questions):
     questions_with_choices = [serialize_operation_question(question) for question in sorted_operation_questions]
     return questions_with_choices
 
-def find_the_last_answer(user_name, last_answer_time, first_index):
+def find_the_last_answer(user_id, last_answer_time, first_index):
     if last_answer_time is None:
         answer_time = 0
         op_type = 1
         op_index = first_index
         return answer_time, op_type, op_index
 
-    user_profile = get_user_profile(user_name)
+    user_profile = get_user_profile(user_id)
     points = UserOperationPoints.objects.filter(user_profile = user_profile,
                              answer_time = last_answer_time)
     if len(points) == 5:
@@ -341,8 +419,8 @@ class OperationQuestionsFromGroupView(generic.ListView):
     template_name = 'question/operation_question.html'
 
     def get_queryset(self):
-        user_name = self.kwargs.get('user_name', '1')
-        age = get_age_by_username(user_name)
+        user_id = self.kwargs.get('user_id', '1')
+        age = get_age_by_userid(user_id)
         group_type = {'user' : 1, 'staff' :2}
 
         operation_questions_list = []
@@ -354,7 +432,9 @@ class OperationQuestionsFromGroupView(generic.ListView):
         return operation_questions_list
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        user_name = self.kwargs['user_name']
+        user_id = self.kwargs['user_id']
+        staff_id = self.kwargs['staff_id']
+        print("OOOOOOO staff_id = {staff_id}");
 
         questions = self.get_queryset()
         questions_list = []
@@ -363,33 +443,21 @@ class OperationQuestionsFromGroupView(generic.ListView):
             questions_list.append(q)
 
         max_answer_time = UserResponse.objects.filter(
-                user_profile__user__username=user_name,
+                user_profile__user__id=user_id,
                 operation_question__type= 1
                 ).aggregate(max_answer=Max('answer_time'))['max_answer']
 
         first_index = self.kwargs.get('current_index', 0)
-        answer_time, op_type, op_index = find_the_last_answer(user_name, max_answer_time, first_index)
-        print(answer_time, op_type, op_index) 
+        answer_time, op_type, op_index = find_the_last_answer(user_id, max_answer_time, first_index)
         global points_record 
-        print(points_record)
         context['current_index'] = op_index
         context['questions'] = questions_list
         context['operation_type'] = op_type
         context['op_answer_time'] = answer_time
+        context['staff_user_id'] = staff_id
 
         return context
 
-def get_user_profile(username):
-    try:
-        user = User.objects.get(username=username)
-        user_profile = user.userprofile
-        return user_profile
-    except User.DoesNotExist:
-        # Handle the case where the user with the given username doesn't exist
-        return None
-    except UserProfile.DoesNotExist:
-        # Handle the case where the user profile doesn't exist for the user
-        return None
 
 def get_question_index_from_age(age, op_type):
     op_id = OperationQuestion.objects.filter(
@@ -523,7 +591,6 @@ def find_next0(op_index, total_index, user_profile):
 
 def one_type_end(end_dict, user_profile):
     global points_record
-
     questions_list = end_dict['questions_list']
     age = end_dict['age']
     user_profile = end_dict['user_profile']
@@ -561,6 +628,7 @@ def get_next_operation_index(args):
             points_record[user_profile.id] = [-1 for i in range(100)]
     else:
         print(points_record)
+        print(user_profile.id)
         points_record[user_profile.id][op_index] = choice_point
         find_2 = get_the_continous(2, user_profile)
         find_0 = get_the_continous(0, user_profile)
@@ -578,7 +646,6 @@ def get_next_operation_index(args):
             op_index = find_next2(op_index, total_index, user_profile)
             #edge
             if op_index == -1:
-                print('edge 22222')
                 first_index = get_the_operation_questions_first_index(questions_list, age, op_type)
                 dict_end = {'user_profile': user_profile,
                             'questions_list': questions_list,
@@ -592,7 +659,6 @@ def get_next_operation_index(args):
             op_index = find_next0(op_index, total_index, user_profile)
             #edge
             if op_index == -1:
-                print('edge 00000')
                 dict_end = {'user_profile': user_profile,
                             'questions_list': questions_list,
                             'age': age,
@@ -601,10 +667,6 @@ def get_next_operation_index(args):
                             'find_2': find_2,
                             'find_0': find_0,}
                 op_type, op_index = one_type_end(dict_end, user_profile)
-
-            
-    print(f'next_index={op_index}')
-    print(f'next_type={op_type}')
     return op_type, op_index
 
 def serialize_operation_points(points):
@@ -616,16 +678,17 @@ def serialize_operation_points(points):
         'point': points[0]['operation_points'],
     }
 
-def next_op_question(request, user_name):
+def next_op_question(request, staff_id, user_id):
     total_index = int(request.GET.get('totalIndex', 0))
     op_type = int(request.GET.get('_op_type', 1))
     op_index = int(request.GET.get('prevIndex', 2))
     choice_index = int(request.GET.get('choice', 3))
     answer_time = int(request.GET.get('op_answer_time', 4))
     # Get the UserProfile associated with the current user
-    user_profile = get_user_profile(user_name)
+    user_profile = get_user_profile(user_id)
+    print(f"#################staff_id{staff_id}")
 
-    age = get_age_by_username(user_name)
+    age = get_age_by_userid(user_id)
     group_type = {'user' : 1, 'staff' :2}
 
     questions_list = get_all_operation_questions()
@@ -658,10 +721,11 @@ def next_op_question(request, user_name):
     return JsonResponse({'next_index': op_index,
                          'next_type': op_type,
                          'op_points': op_points,
+                         'user_id': staff_id,
                          })
 
-def prev_op_question(request, user_name):
-    print(user_name)
+def prev_op_question(request, user_id):
+    print(user_id)
 
 # forms.py
 class QuestionForm(forms.Form):
@@ -743,19 +807,32 @@ class SubmitResponseView(View):
     model = Question
     template_name = 'question/submit.html'
     def post(self, request, *args, **kwargs):
+        print(f'request.user={request.user}')
         # Retrieve user's selections from the form
         user_profile = request.user.userprofile  # Assuming the user is authenticated and has a UserProfile
+        print(f'request.user={request.user}')
+        
         question_ids = [int(key.split('_')[1]) for key in request.POST if key.startswith('question_')]
         selected_choices = {question_id: int(request.POST[f'question_{question_id}']) for question_id in question_ids}
         # Save the user's responses to the database
         for question_id, choice_id in selected_choices.items():
             question = Question.objects.get(pk=question_id)
             choice = Choice.objects.get(pk=choice_id)
-            UserResponse.objects.create(user_profile=user_profile, question=question, choice=choice)
+            # Check if a UserResponse already exists for the user_profile and question
+            existing_response = UserResponse.objects.filter(user_profile=user_profile, question=question).first()
+
+            if existing_response:
+                # If a response exists, update the choice
+                existing_response.choice = choice
+                existing_response.timestamp = timezone.now()
+                existing_response.save()
+            else:
+                # If no response exists, create a new one
+                UserResponse.objects.create(user_profile=user_profile, question=question, choice=choice)
 
         # Retrieve the user's responses
         user_responses = UserResponse.objects.filter(user_profile=user_profile)
-        return render(request, self.template_name, {'user_responses': user_responses})
+        return render(request, self.template_name, {'user_responses': user_responses, 'user_id': 74})
         
     def get(self, request):
         return render(request, self.template_name)

@@ -1,18 +1,28 @@
 from django.db import models
-# Create your models here.
 from django.db import models
 from django.utils import timezone
 from django.db import models
 from django.contrib.auth.models import User
 
 class UserProfile(models.Model):
+    GENDER_CHOICES = [
+        ('male', '男'),
+        ('female', '女'),
+    ]
+    HOSPITAL_CHOICES = [
+        (0, '上海中易'),
+        (1, '上海市妇幼中心'),
+        (2, '奉贤区妇幼中心'),
+    ]
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     telephone = models.CharField(max_length=15, null=True, blank=True)
     birth_date = models.DateField(null=True, blank=True)  # Use DateField for date of birth
     role = models.CharField(max_length=20, choices=[('admin', 'Admin'), ('user', 'Normal User'), ('staff', 'Staff')], default='user')
+    gender = models.CharField(max_length=10, choices=GENDER_CHOICES, default = 'male')
+    hospital = models.IntegerField(choices=HOSPITAL_CHOICES, default=0)
 
     def __str__(self):
-        return self.user.username  # Represent the user profile by username
+        return f'{self.user_id} - {self.user.username} ({self.get_gender_display()}) - Hospital: {self.get_hospital_display()}'
 
 from django.db import models
 

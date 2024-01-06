@@ -1,6 +1,10 @@
+{% load static %}
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="{% static 'question/normal.css' %}">
     <title>Sign Up</title>
 </head>
 <body>
@@ -13,6 +17,13 @@
         <label for="telephone">电话:</label>
         <input type="text" id="telephone" name="telephone" pattern="\d+" title="Please enter only digits" required>
         <br>
+        <label for="gender">性别:</label>
+        <select id="gender" name="gender">
+            {% for value, label in form.gender.field.choices %}
+                <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+        </select>
+        <br>
         <label for="password">密码:</label>
         <input type="password" id="password" name="password" required>
         <br>
@@ -22,10 +33,17 @@
         <label for="birthday_date">生日:</label>
         <input type="date" id="birthday_date" name="birthday_date" required>
         <br>
-	<label for="role">Role:</label>
-        <select id="role" name="role">
-            <option value="user">Normal User</option>
-            <option value="staff">Staff</option>
+        <label for="role">Role:</label>
+            <select id="role" name="role">
+                <option value="user">Normal User</option>
+                <option value="staff">Staff</option>
+            </select><br>
+
+         <label for="hospital">医院:</label>
+        <select id="hospital" name="hospital">
+            {% for value, label in form.hospital.field.choices %}
+                <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
         </select><br>
         <input type="submit" value="Sign Up">
     </form>

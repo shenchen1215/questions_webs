@@ -1,12 +1,2 @@
-<form action="{% url 'questionnaire:vote' question.id %}" method="post">
-{% csrf_token %}
-<fieldset>
-    <legend><h1>{{ question.question_text }}</h1></legend>
-    {% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
-    {% for choice in question.choice_set.all %}
-        <label>question</label>
-    {% endfor %}
+<a href="{% url 'questionnaire:export_excel' %}" download="exported_data.xlsx">Download Excel</a>
 
-</fieldset>
-<input type="submit" value="Vote">
-</form>

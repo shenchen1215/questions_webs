@@ -1,22 +1,32 @@
+{% load static %}
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Options</title>
+    <link rel="stylesheet" type="text/css" href="{% static 'question/staff.css' %}">
 </head>
 <body>
-    <h2>Choose an Option</h2>
-    <ul>
-        <tbody>
-        {% for user_profile in babies_list %}
-            <tr>
-                <form method="get" action="{% url 'questionnaire:operation_questions' user_name=user_profile.user.username %}">
-                    {% csrf_token %}
-                    <button type="submit">{{ user_profile.user.username }}</button>
-                </form>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </ul>
+	    <ul>
+            <h2>你好，ID：{{staff_id}}用户</h2>
+		<tbody>
+		
+		{% for user_profile in babies_list %}
+		    <tr>
+			<form method="get" action="{% url 'questionnaire:operation_questions' staff_id=staff_id user_id=user_profile.user.id %}">
+			    {% csrf_token %}
+			    <button type="submit">{{ user_profile.user.username }}</button>
+			</form>
+		    </tr>
+		{% endfor %}
+
+		<form method="get" action="{% url 'questionnaire:export_excel' %}">
+		    {% csrf_token %}
+		    <button type="submit">Export Excel</button>
+		</form>
+		</tbody>
+	    </ul>
 </body>
 </html>
 

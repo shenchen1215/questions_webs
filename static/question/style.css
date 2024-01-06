@@ -2,14 +2,18 @@
 
 /* Add your styles here */
 body {
-    font-family: Arial, sans-serif;
+    background-image: url('/static/image/questions.jpg');    
+    background-size: cover;
+    background-repeat: no-repeat;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    height: 100vh;
     margin: 0;
-    padding: 0;
 }
 
 #question-container {
-	background-color: #f2f2f2; /* Set background color */
-	padding: 20px; /* Add some padding for better readability */
 }
 
 .question-content {
@@ -21,15 +25,30 @@ body {
 }
 
 .question-content img{
-    width: 300px; /* Set the width of the image */
+    width: 200px; /* Set the width of the image */
     height: auto; /* Maintain aspect ratio */
+    background-repeat: no-repeat;
+}
+.question-task {
+    margin-top: 50px; /* Adjust the margin as needed */
+    font-size: 16px;
+}
+.question-text {
+    font-size: 16px;
+}
+.choice-container {
+    text-align: center;
+    align-items: center;
+    justify-content: center;
 }
 
-button {
-    background-color: #4caf50;
-    color: #fff;
-    padding: 10px 20px;
-    font-size: 16px;
-    cursor: pointer;
+.choice-container label {
+    display: block;
+    margin-bottom: 10px; /* Adjust the margin as needed */
+}
+
+#next-button {
+    display: block;
+    margin-top: 30px; /* Adjust the margin as needed */
 }
 

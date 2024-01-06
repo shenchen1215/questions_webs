@@ -1,4 +1,7 @@
 body {
+    background-image: url('/static/image/login.jpg');    
+    background-size: cover;
+    background-repeat: no-repeat;
     display: flex;
     align-items: center;
     justify-content: center;

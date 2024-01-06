@@ -25,6 +25,10 @@
             </tr>
         {% endfor %}
     </table>
+    {% if user_responses %}
+        <a href="{% url 'questionnaire:homepage_user' user_responses.0.user_profile.user_id %}" class="back-button">Back to Homepage</a>
+    {% endif %}
+
 </body>
 </html>
 

@@ -10,14 +10,11 @@
 <body>
     <form method="post">
         {% csrf_token %}
-        {{ form.username.label_tag }}
-        {{ form.username }}
+        {{ form.userid.label_tag }}
+        {{ form.userid }}
         <br>
         {{ form.password.label_tag }}
         {{ form.password }}
-        <br>
-        {{ form.role.label_tag }}
-        {{ form.role }}
         <br>
         <input type="submit" value="Log In">
     </form>

@@ -1,0 +1,19 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="{% static 'question/normal.css' %}">
+    <title>Log In Success</title>
+</head>
+<body>
+    <h2>Log In Successful</h2>
+    <p>Name: {{ user_profile.user.username }}</p>
+    <p>User ID: {{ user_profile.user_id }}</p>
+
+    <form method="get" action="{% url 'questionnaire:group_questions' user_id=user_profile.user.id %}">
+        <button type="submit">Questions</button>
+    </form>
+</body>
+</html>
