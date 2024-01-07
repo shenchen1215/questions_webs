@@ -8,8 +8,8 @@
     <title>Sign Up</title>
 </head>
 <body>
-    <h1>Create a New User</h1>
-    <form method="post" action="{% url 'questionnaire:sign_up' %}">
+    <h1>创建一个家长账户</h1>
+    <form method="post" action="{% url 'questionnaire:sign_up_normal' %}">
         {% csrf_token %}
         <label for="username">姓名:</label>
         <input type="text" id="username" name="username" required>
@@ -33,19 +33,13 @@
         <label for="birthday_date">生日:</label>
         <input type="date" id="birthday_date" name="birthday_date" required>
         <br>
-        <label for="role">Role:</label>
-            <select id="role" name="role">
-                <option value="user">Normal User</option>
-                <option value="staff">Staff</option>
-            </select><br>
-
-         <label for="hospital">医院:</label>
+        <label for="hospital">医院:</label>
         <select id="hospital" name="hospital">
             {% for value, label in form.hospital.field.choices %}
                 <option value="{{ value }}">{{ label }}</option>
             {% endfor %}
         </select><br>
-        <input type="submit" value="Sign Up">
+        <input type="submit" value="注册">
     </form>
 </body>
 </html>

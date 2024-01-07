@@ -1,0 +1,38 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="{% static 'question/normal.css' %}">
+    <title>Sign Up</title>
+</head>
+<body>
+    <h1>创建一个医生账户</h1>
+    <form method="post" action="{% url 'questionnaire:sign_up_staff' %}">
+        {% csrf_token %}
+        <label for="invitation_code">注册邀请码:</label>
+        <input type="text" id="invitation_code" name="invitation_code" required>
+        <br>
+        <label for="username">姓名:</label>
+        <input type="text" id="username" name="username" required>
+        <br>
+        <label for="telephone">电话:</label>
+        <input type="text" id="telephone" name="telephone" pattern="\d+" title="Please enter only digits" required>
+        <br>
+        <label for="password">密码:</label>
+        <input type="password" id="password" name="password" required>
+        <br>
+        <label for="password_confirm">确认密码:</label>
+        <input type="password" id="password_confirm" name="password_confirm" required>
+        <br>
+        <label for="hospital">医院:</label>
+        <select id="hospital" name="hospital">
+            {% for value, label in form.hospital.field.choices %}
+                <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+        </select><br>
+        <input type="submit" value="注册">
+    </form>
+</body>
+</html>

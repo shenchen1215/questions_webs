@@ -9,14 +9,19 @@
 </head>
 <body>
     <div class="container">
-        <form action="{% url 'questionnaire:sign_up' %}" method="GET">
+        <form action="{% url 'questionnaire:sign_up_normal' %}" method="GET">
             {% csrf_token %}
-            <input type="submit" value="Sign Up" class="button">
+            <input type="submit" value="家长注册" class="button">
+        </form>
+
+        <form action="{% url 'questionnaire:sign_up_staff' %}" method="GET">
+            {% csrf_token %}
+            <input type="submit" value="医生注册" class="button">
         </form>
 
         <form action="{% url 'questionnaire:user_login' %}" method="GET">
             {% csrf_token %}
-            <input type="submit" value="Log In" class="button">
+            <input type="submit" value="登陆" class="button">
         </form>
     </div>
 </body>

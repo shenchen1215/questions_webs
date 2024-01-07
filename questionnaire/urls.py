@@ -10,13 +10,11 @@ from django.conf.urls.static import static
 app_name = "questionnaire"
 urlpatterns = [
     path("", views.HomeView.as_view(), name="homepage"),
-    path("<int:pk>/", views.DetailView.as_view(), name="detail"),
-    path("create_question/", views.create_question, name="create_question"),
     path("question/", views.CreateQuestionViews.as_view(), name="create"),
-    path('sign_up/', views.sign_up, name='sign_up'),
+    path('sign_up_normal/', views.sign_up_normal, name='sign_up_normal'),
+    path('sign_up_staff/', views.sign_up_staff, name='sign_up_staff'),
     path('staff_questions/<str:user_id>/', views.StaffQuestions.as_view(), name="staff_questions"),
     path('login/', views.user_login, name='user_login'),
-    path('parents/', views.ParentsView.as_view(), name='parents'),
     path('homepage_user/<str:user_id>/', views.HomepageUserView.as_view(), name='homepage_user'),
     path('group-questions/<str:user_id>/', views.QuestionsFromGroupView.as_view(), name='group_questions'),
     path('operation_questions/<str:staff_id>/<str:user_id>/', views.OperationQuestionsFromGroupView.as_view(), name='operation_questions'),

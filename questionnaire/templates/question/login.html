@@ -10,10 +10,10 @@
 <body>
     <form method="post">
         {% csrf_token %}
-        {{ form.userid.label_tag }}
+        <label for="username">注册ID:</label>
         {{ form.userid }}
         <br>
-        {{ form.password.label_tag }}
+        <label for="password">密码:</label>
         {{ form.password }}
         <br>
         <input type="submit" value="Log In">

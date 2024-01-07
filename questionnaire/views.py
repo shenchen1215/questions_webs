@@ -122,10 +122,6 @@ def export_excel(request):
 
     return response
 
-class DetailView(generic.DetailView):
-    model = Question
-    template_name = "question/detail.html"
-
 class CreateQuestionViews(generic.ListView):
     model = Question
     template_name = "question/createquestions.html"
@@ -142,19 +138,16 @@ class HomepageUserView(generic.ListView):
         user_id = self.kwargs.get('user_id', '0')
         user_profile = get_user_profile(user_id)
         context['user_profile'] = user_profile
+        user_month = get_age_by_userid(user_id) 
+        context['user_month'] = user_month
         return context
 
-class SignUpViews(generic.ListView):
-    model = Question
-    template_name = "question/sign_up.html"
-
-class SignUpForm(forms.Form):
+class SignUpNormalForm(forms.Form):
     username = forms.CharField()
     telephone = forms.CharField()  # Add the telephone field
     password = forms.CharField(widget=forms.PasswordInput())
     password_confirm = forms.CharField(widget=forms.PasswordInput())  # Password confirmation field
     birthday_date = forms.DateField(required=False)
-    role = forms.ChoiceField(choices=[('user', 'Normal User'), ('staff', 'Staff')])
     gender = forms.ChoiceField(choices=UserProfile.GENDER_CHOICES)
     hospital = forms.ChoiceField(choices=UserProfile.HOSPITAL_CHOICES)
 
@@ -166,21 +159,20 @@ class SignUpForm(forms.Form):
         if password != password_confirm:
             raise forms.ValidationError("The passwords do not match. Please try again.")
 
-def sign_up(request):
+def sign_up_normal(request):
     if request.method == "POST":
-        form = SignUpForm(request.POST)
+        form = SignUpNormalForm(request.POST)
         if form.is_valid():
             username = form.cleaned_data['username']
             telephone = form.cleaned_data['telephone']
             password = form.cleaned_data['password']
             birthday_date = form.cleaned_data['birthday_date']
-            role = form.cleaned_data['role']
             gender = form.cleaned_data['gender']
             hospital = form.cleaned_data['hospital']
             # Check if the username already exists
             if UserProfile.objects.filter(user__username=username, telephone=telephone).exists():
-                return render(request, 'question/sign_up.html', {'form': form, 'error_message': 'Username already exists'})
-
+                return render(request, 'question/sign_up_normal.html', {'form': form, 'error_message': 'Username already exists'})
+            role = 'user'
             user = User.objects.create_user(username=username, password=password)
             user.save()
             user_profile = UserProfile(user=user, birth_date=birthday_date,
@@ -188,20 +180,67 @@ def sign_up(request):
             user_id = user_profile.user_id
             user_profile.save()
             login(request, user)
-            if role == 'staff':
-                return HttpResponseRedirect(reverse('questionnaire:staff_questions', args=[user_id]))
             current_date = datetime.now()
             age_in_months = (current_date.year - birthday_date.year) * 12 + (current_date.month - birthday_date.month)
             group_name = str(age_in_months)
-
             return HttpResponseRedirect(reverse('questionnaire:homepage_user', args=[user_id]))
         else:
             print(form.errors)
             # Form is not valid, show the form with errors
-            return render(request, 'question/sign_up.html', {'form': form})
+            return render(request, 'question/sign_up_normal.html', {'form': form})
     else:
-        form = SignUpForm()
-    return render(request, 'question/sign_up.html', {'form': form})
+        form = SignUpNormalForm()
+    return render(request, 'question/sign_up_normal.html', {'form': form})
+
+class SignUpStaffForm(forms.Form):
+    invitation_code = forms.CharField()
+    username = forms.CharField()
+    telephone = forms.CharField()  # Add the telephone field
+    password = forms.CharField(widget=forms.PasswordInput())
+    password_confirm = forms.CharField(widget=forms.PasswordInput())  # Password confirmation field
+    hospital = forms.ChoiceField(choices=UserProfile.HOSPITAL_CHOICES)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        password = cleaned_data.get("password")
+        password_confirm = cleaned_data.get("password_confirm")
+
+        if password != password_confirm:
+            raise forms.ValidationError("The passwords do not match. Please try again.")
+
+def sign_up_staff(request):
+    if request.method == "POST":
+        form = SignUpStaffForm(request.POST)
+        if form.is_valid():
+            invitation_code = form.cleaned_data['invitation_code']
+            username = form.cleaned_data['username']
+            telephone = form.cleaned_data['telephone']
+            password = form.cleaned_data['password']
+            hospital = form.cleaned_data['hospital']
+            if invitation_code != '1023':
+                return render(request, 'question/sign_up_staff.html', {'form': form, 'error_message': 'error invitation code'})
+
+            # Check if the username already exists
+            if UserProfile.objects.filter(user__username=username, telephone=telephone).exists():
+                return render(request, 'question/sign_up_staff.html', {'form': form, 'error_message': 'Username already exists'})
+            role = 'staff'
+            user = User.objects.create_user(username=username, password=password)
+            user.save()
+            user_profile = UserProfile(user=user,
+                                       role=role,
+                                       telephone=telephone,
+                                       hospital=hospital)
+            user_id = user_profile.user_id
+            user_profile.save()
+            login(request, user)
+            return HttpResponseRedirect(reverse('questionnaire:staff_questions', args=[user_id]))
+        else:
+            print(form.errors)
+            # Form is not valid, show the form with errors
+            return render(request, 'question/sign_up_staff.html', {'form': form})
+    else:
+        form = SignUpStaffForm()
+    return render(request, 'question/sign_up_staff.html', {'form': form})
 
 class LoginForm(forms.Form):
     userid = forms.CharField()
@@ -215,7 +254,6 @@ def user_login(request):
             password = form.cleaned_data['password']
             user = authenticate(request, userid=user_id, password=password)
             user_profile = get_user_profile(user_id)
-            print(f'login user_profile id={user_id}')
             if user_profile is not None:
                 if user_profile.role == 'staff':
                     login(request, user)
@@ -232,6 +270,7 @@ def user_login(request):
     else:
         form = LoginForm()
     return render(request, 'question/login.html', {'form': form})
+
 def create_new_question(g_month, g_type, question, choices, task, stimulus, posture,picture, op_id):
         # Create a new Group object and save it
         new_group = Group(name=g_month, type=2)  # Provide the desired name and type
@@ -531,6 +570,8 @@ def get_the_operation_questions_first_index(questions_list, age, op_type):
             group__name = age,
             type = op_type)
     
+    print(f'age={age}, type={op_type}')
+    print(f'questions={questions}')
     index = 0
     while index < len(questions_list[op_type - 1]):
         if questions_list[op_type - 1][index]['operation_id'] == questions[0].operation_id:
@@ -807,10 +848,8 @@ class SubmitResponseView(View):
     model = Question
     template_name = 'question/submit.html'
     def post(self, request, *args, **kwargs):
-        print(f'request.user={request.user}')
         # Retrieve user's selections from the form
         user_profile = request.user.userprofile  # Assuming the user is authenticated and has a UserProfile
-        print(f'request.user={request.user}')
         
         question_ids = [int(key.split('_')[1]) for key in request.POST if key.startswith('question_')]
         selected_choices = {question_id: int(request.POST[f'question_{question_id}']) for question_id in question_ids}

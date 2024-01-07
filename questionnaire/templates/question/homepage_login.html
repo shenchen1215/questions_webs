@@ -8,12 +8,14 @@
     <title>Log In Success</title>
 </head>
 <body>
-    <h2>Log In Successful</h2>
-    <p>Name: {{ user_profile.user.username }}</p>
+    <h2>登陆成功</h2>
+    <p>姓名 {{ user_profile.user.username }}</p>
     <p>User ID: {{ user_profile.user_id }}</p>
+    <p>生日: {{ user_profile.birth_date }}</p>
+    <p>月龄: {{ user_month }}</p>
 
     <form method="get" action="{% url 'questionnaire:group_questions' user_id=user_profile.user.id %}">
-        <button type="submit">Questions</button>
+        <button type="submit">开始做题</button>
     </form>
 </body>
 </html>
